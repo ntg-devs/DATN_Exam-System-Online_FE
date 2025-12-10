@@ -659,24 +659,22 @@ function FaceRegister() {
         <div className="fixed inset-0 bg-opacity-100 bg-black/60 flex items-center justify-center z-50">
           <div className="bg-white max-w-lg w-full p-6 rounded-2xl shadow-xl">
             <h2 className="text-xl font-bold mb-4 text-center">
-              Điều khoản sử dụng nhận diện khuôn mặt
+              Điều khoản sử dụng
             </h2>
 
             <p className="text-gray-700 leading-relaxed mb-4">
-              Hệ thống sẽ yêu cầu bạn cung cấp video quay khuôn mặt để phục vụ
-              cho quá trình <b>huấn luyện mô hình nhận diện</b> nhằm phòng chống
-              gian lận thi cử (thi hộ, mạo danh).
+              Hệ thống sẽ yêu cầu bạn quay video khuôn mặt để phục vụ 
+              cho quá trình <b>xác thực danh tính</b>.
             </p>
 
             <p className="text-gray-700 leading-relaxed mb-4">
-              <b>Video của bạn KHÔNG được lưu trữ lâu dài.</b> Sau khi hoàn tất
-              quá trình training, toàn bộ video sẽ được xóa khỏi máy chủ. Hệ
-              thống cam kết bảo mật tuyệt đối thông tin của sinh viên.
+              <b>Để bảo vệ dữ liệu cá nhân video của bạn sẽ không được lưu trữ.</b> Sau khi hoàn tất
+              quá trình đăng ký, video sẽ được xóa khỏi máy chủ. 
             </p>
 
             <p className="text-gray-700 leading-relaxed mb-6">
-              Nhấn <b>“Tôi đồng ý”</b> để tiếp tục, hoặc <b>“Từ chối”</b> nếu
-              bạn không muốn sử dụng nhận diện khuôn mặt.
+              Nhấn <b>“Đồng ý”</b> để tiếp tục, hoặc <b>“Từ chối”</b> nếu
+              bạn không muốn sử dụng dịch vụ.
             </p>
 
             {/* BUTTON GROUP */}

@@ -2130,7 +2130,7 @@ export default function StudentLive({ fps = 4 }) {
         <div className="fixed inset-0 bg-white/70 backdrop-blur-md flex items-center justify-center z-[999] p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6">
             <h2 className="text-2xl font-bold text-indigo-600 text-center mb-4">
-              Hướng dẫn đặt camera & Quy chế chống gian lận
+              Hướng dẫn đặt camera & Quy chế thi
             </h2>
 
             <div className="space-y-4 text-gray-700">

@@ -564,7 +564,7 @@ export default function StudentClassDetail() {
         {/* EXAM LIST */}
         <div className="mt-10">
           <h2 className="text-2xl font-bold mb-3 text-gray-800 flex items-center gap-2">
-            <CalendarDays size={24} /> Bài thi
+            <CalendarDays size={24} /> Lịch thi
           </h2>
 
           {cls.exams?.length ? (

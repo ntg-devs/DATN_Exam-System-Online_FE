@@ -828,20 +828,20 @@ export default function ClassDashboard() {
                 </h2>
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="font-medium text-lg flex items-center gap-2">
-                    <FaRegCalendarAlt /> Bài thi
+                    <FaRegCalendarAlt /> Lịch thi
                   </h3>
                   {userInfo.role === "teacher" && (
                     <button
                       onClick={() => setShowExamModal(true)}
                       className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
                     >
-                      <FaPlus /> Tạo bài thi
+                      <FaPlus /> Tạo lịch thi
                     </button>
                   )}
                 </div>
 
                 {exams.length === 0 ? (
-                  <p className="text-gray-500">Chưa có bài thi nào.</p>
+                  <p className="text-gray-500">Chưa có lịch nào.</p>
                 ) : (
                   <ul className="space-y-3 max-h-[60vh] overflow-y-auto">
                     {exams.map((ex) => {
@@ -870,7 +870,7 @@ export default function ClassDashboard() {
                               onClick={() => openExamDetail(ex)}
                               className="text-indigo-600 underline text-sm"
                             >
-                              Chi tiết bài thi
+                              Chi tiết lịch thi
                             </button>
                             {/* {status === "active" && (
                               <button
@@ -1008,7 +1008,7 @@ export default function ClassDashboard() {
             >
               <MdClose size={24} />
             </button>
-            <h2 className="text-xl font-semibold mb-4">Tạo bài thi</h2>
+            <h2 className="text-xl font-semibold mb-4">Tạo lịch thi</h2>
 
             <form onSubmit={handleCreateExam} className="flex flex-col gap-3">
               <input
@@ -1107,7 +1107,7 @@ export default function ClassDashboard() {
               <MdClose size={24} />
             </button>
             <h2 className="text-xl font-semibold mb-4">
-              Chi tiết bài thi: {examDetail.name}
+              Chi tiết lịch thi: {examDetail.name}
             </h2>
 
             <div className="mb-4">
