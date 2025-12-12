@@ -1925,7 +1925,7 @@ const getReasonText = (reason) => {
 const behaviorMap = {
     hand_move: "Di chuyển tay bất thường",
     mobile_use: "Sử dụng điện thoại",
-    side_watching: "Nghiêng mặt nhìn quanh",
+    side_watching: "Nghiêng mặt sang hướng khác",
     mouth_open: "Mở miệng trao đổi",
     eye_movement: "Liếc mắt nhiều hướng",
   };

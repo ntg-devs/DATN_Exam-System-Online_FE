@@ -561,16 +561,17 @@ function FaceRegister() {
         //   body: formData,
         // });
 
+        navigate("/dashboard");
+
         const data = await res.json();
-        console.log(data);
-        if (res.ok) {
-          setStatus("Đăng ký danh tính thành công!");
-          toast.success("Đăng ký danh tính thành công!");
-          navigate("/dashboard");
-        } else {
-          setStatus(`Lỗi: ${data.detail || "Không xác định"}`);
-          toast.error(`Lỗi: ${data.detail || "Không xác định"}`);
-        }
+        // if (res.ok) {
+        //   setStatus("Đăng ký danh tính thành công!");
+        //   toast.success("Đăng ký danh tính thành công!");
+        //   navigate("/dashboard");
+        // } else {
+        //   setStatus(`Lỗi: ${data.detail || "Không xác định"}`);
+        //   toast.error(`Lỗi: ${data.detail || "Không xác định"}`);
+        // }
       }
     } catch (err) {
       console.error("❌ Upload error:", err);

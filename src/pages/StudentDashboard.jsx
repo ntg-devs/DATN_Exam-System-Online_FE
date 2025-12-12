@@ -245,6 +245,7 @@ import { pushNotification } from "../redux/slices/notificationSlice";
 import { useDispatch } from "react-redux";
 import NotificationBell from "../components/NotificationBell";
 import { SOCKET_URL } from "../utils/path";
+import { setVerifyInfo } from "../redux/slices/verifySlice";
 
 export default function StudentDashboard() {
   const [myClasses, setMyClasses] = useState([]);
@@ -256,6 +257,7 @@ export default function StudentDashboard() {
   const [passwordInput, setPasswordInput] = useState("");
 
   const { userInfo } = useSelector((state) => state.user);
+  const verifyInfo = useSelector((state) => state.verify.verifyInfo);
   const studentId = userInfo?._id;
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -412,6 +414,33 @@ export default function StudentDashboard() {
     return () => ws.close();
   }, [studentId]);
 
+  useEffect(() => {
+    const ws = new WebSocket(`${SOCKET_URL}/student_register_video`);
+
+    // Sau khi kết nối, gửi student_id lên
+    ws.onopen = () => {
+      ws.send(studentId);
+    };
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      if (data.type === "face_register_pending") {
+        dispatch(setVerifyInfo({ statusRegisterVideo: false }));
+      }
+
+      if (data.type === "face_register_success") {
+        dispatch(setVerifyInfo({ statusRegisterVideo: true }));
+        toast.success(data.message);
+      }
+
+      if (data.type === "face_register_failed") {
+        dispatch(setVerifyInfo({ statusRegisterVideo: false }));
+        toast.error(data.error);
+      }
+    };
+  }, [studentId]);
+
   return (
     <div className="p-6  mx-auto">
       <Toaster position="top-right" />
@@ -513,6 +542,15 @@ export default function StudentDashboard() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {verifyInfo?.statusRegisterVideo === false && (
+        <div className="fixed bottom-6 left-6 bg-white shadow-lg rounded-xl px-4 py-3 flex items-center gap-3 border border-gray-200 z-50">
+          <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+          <span className="text-sm font-medium text-gray-700">
+            Đang xử lý đăng ký khuôn mặt...
+          </span>
         </div>
       )}
     </div>

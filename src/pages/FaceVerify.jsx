@@ -723,6 +723,8 @@ export default function FaceVerify() {
         method: "POST",
         body: formData,
       });
+
+      console.log(res)
       // const res = await fetch("http://https://unworkable-bernie-merely.ngrok-free.dev/api/verify-face", {
       //   method: "POST",
       //   body: formData,

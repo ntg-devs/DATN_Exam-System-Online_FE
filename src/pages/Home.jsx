@@ -406,7 +406,7 @@ export default function Home() {
             type="submit"
             className="w-full bg-green-500 text-white py-3 rounded-lg font-semibold hover:bg-green-600 transition"
           >
-            Tạo tài khoản {role === "teacher" ? "Giảng viên" : "Sinh viên"}
+            Tạo tài khoản {role === "teacher" ? "" : ""}
           </motion.button>
         </form>
 

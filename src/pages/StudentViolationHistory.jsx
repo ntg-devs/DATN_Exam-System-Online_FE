@@ -1155,7 +1155,7 @@ export default function StudentViolationHistory() {
   const behaviorMap = {
     hand_move: "Di chuyển tay bất thường",
     mobile_use: "Sử dụng điện thoại",
-    side_watching: "Nghiêng mặt nhìn quanh",
+    side_watching: "Nghiêng mặt sang hướng khác",
     mouth_open: "Mở miệng trao đổi",
     eye_movement: "Liếc mắt nhiều hướng",
   };
@@ -1625,7 +1625,7 @@ export default function StudentViolationHistory() {
                             </p>
                           )}
 
-                          <p>Điểm: {v.score?.toFixed(2)}  </p>
+                          <p>Điểm: {v.score?.toFixed(2)} </p>
 
                           {v.reason && (
                             <div
@@ -1649,7 +1649,11 @@ export default function StudentViolationHistory() {
                           )}
 
                           <p className="text-gray-500 text-xs">
-                            Ghi nhận: {new Date(v.timestamp).toLocaleString()}
+                            Ghi nhận:{" "}
+                            {new Date(
+                              new Date(v.timestamp).getTime() +
+                                7 * 60 * 60 * 1000
+                            ).toLocaleString()}
                           </p>
 
                           {v.evidence && (

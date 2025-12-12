@@ -282,6 +282,7 @@ import {
   FaClock,
   FaCheckCircle,
   FaPlus,
+  FaUser,
   FaUserPlus,
   FaDoorOpen,
   FaRegCalendarAlt,
@@ -304,6 +305,7 @@ import {
   createExamSession,
   addStudentsToExamSession,
   getStudentsNotInClass,
+  getStudentsInClass,
   getStudentsNotInSession,
   getStudentsInSession,
 } from "../services/services";
@@ -317,7 +319,6 @@ export default function ClassDashboard() {
   const dispatch = useDispatch();
   const verifyInfo = useSelector((state) => state.verify.verifyInfo);
 
-
   const [classes, setClasses] = useState([]);
   const [showCreateClassModal, setShowCreateClassModal] = useState(false);
   const [className, setClassName] = useState("");
@@ -326,6 +327,8 @@ export default function ClassDashboard() {
   const [classPassword, setClassPassword] = useState("");
 
   const [currentClass, setCurrentClass] = useState(null);
+  const [currentClassId, setCurrentClassId] = useState(null);
+  const [currentClassListStudent, setCurrentClassListStudent] = useState(null);
   const [students, setStudents] = useState([]);
   const [studentNotInSession, setStudentNotInSession] = useState([]);
   const [selectedStudents, setSelectedStudents] = useState([]);
@@ -338,11 +341,15 @@ export default function ClassDashboard() {
   const [exams, setExams] = useState([]);
   const [showExamModal, setShowExamModal] = useState(false);
 
+  const [panelMode, setPanelMode] = useState("exam");
+
   // Exam form fields
   const [examName, setExamName] = useState("");
   const [examCode, setExamCode] = useState("");
   const [examStartTime, setExamStartTime] = useState("");
   const [examDuration, setExamDuration] = useState("");
+
+  const [listStudentsInClass, setListStudentsInClass] = useState([]);
 
   // New: sessions within create-exam modal
   const [sessions, setSessions] = useState([
@@ -363,7 +370,7 @@ export default function ClassDashboard() {
     room: "",
   });
 
-  console.log(examDetail)
+  const now = new Date().toISOString().slice(0, 16);
 
   // Add students to session
   const [showAddStudentsToSessionModal, setShowAddStudentsToSessionModal] =
@@ -380,6 +387,20 @@ export default function ClassDashboard() {
   useEffect(() => {
     if (userInfo?._id) fetchClasses();
   }, [userInfo]);
+
+  useEffect(() => {
+    if (!currentClass) return;
+    loadStudentData();
+  }, [currentClass]);
+
+  const loadStudentData = async () => {
+    try {
+      const data = await getStudentsInClass({ class_id: currentClass._id });
+      setListStudentsInClass(data?.students || []);
+    } catch {
+      notifyError("Không thể tải danh sách sinh viên!");
+    }
+  };
 
   const fetchClasses = async () => {
     try {
@@ -500,6 +521,11 @@ export default function ClassDashboard() {
     }
   };
 
+  const handleOpenClassDetailListStudent = (cls) => {
+    setCurrentClass(cls);
+    setPanelMode("student");
+  };
+
   // -------------------------------
   // Create Exam (with sessions)
   // -------------------------------
@@ -558,6 +584,7 @@ export default function ClassDashboard() {
       setSessions([{ start_time: "", duration: "", room: "" }]);
       // refresh exams list for current class
       handleOpenClassDetail(currentClass);
+      handleOpenClassDetailListStudent(currentClass);
     } catch (err) {
       console.error(err);
       notifyError("Lỗi khi tạo bài thi!");
@@ -600,6 +627,9 @@ export default function ClassDashboard() {
 
   // Add session from exam detail
   const handleAddSessionToExam = async () => {
+    if (Number(newSessionForm.duration) < 15) {
+      return notifyError("Thời lượng ca thi phải từ 15 phút trở lên!");
+    }
     if (!newSessionForm.start_time || !newSessionForm.duration)
       return notifyError("Vui lòng nhập thời gian và thời lượng ca thi!");
     try {
@@ -695,7 +725,7 @@ export default function ClassDashboard() {
     return "";
   };
 
-  console.log(examDetail)
+  console.log(examDetail);
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -721,7 +751,12 @@ export default function ClassDashboard() {
             >
               Lịch sử vi phạm
             </Link>
-            <button onClick={() => {navigate("/")}} className="px-3 py-2 bg-red-500 text-white rounded-xl flex items-center gap-2 hover:bg-red-600 shadow">
+            <button
+              onClick={() => {
+                navigate("/");
+              }}
+              className="px-3 py-2 bg-red-500 text-white rounded-xl flex items-center gap-2 hover:bg-red-600 shadow"
+            >
               <LogOut size={18} /> Đăng xuất
             </button>
           </div>
@@ -776,13 +811,19 @@ export default function ClassDashboard() {
                       <div className="flex flex-col gap-2">
                         <div className="flex gap-2">
                           <button
-                            onClick={() => handleOpenClassDetail(cls)}
+                            onClick={() => {
+                              handleOpenClassDetailListStudent(cls);
+                              setPanelMode("student");
+                            }}
                             className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg text-sm"
                           >
                             <FaRegCalendarAlt /> Chi tiết
                           </button>
                           <button
-                            onClick={() => handleOpenClassDetail(cls)}
+                            onClick={() => {
+                              handleOpenClassDetail(cls);
+                              setPanelMode("exam");
+                            }}
                             className="flex items-center gap-2 bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-1 rounded-lg text-sm"
                           >
                             Lịch thi
@@ -791,9 +832,10 @@ export default function ClassDashboard() {
                         {userInfo.role === "teacher" ? (
                           <button
                             onClick={() => handleOpenStudentModal(cls)}
-                            className="flex items-center gap-2 bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded-lg text-sm"
+                            className="flex text-center justify-center items-center gap-2 bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded-lg text-sm"
                           >
-                            <FaUserPlus /> Sinh viên
+                            <FaUserPlus />
+                            Thêm Sinh viên
                           </button>
                         ) : cls.students?.includes(userInfo._id) ? (
                           <div className="bg-gray-200 text-gray-600 px-3 py-1 rounded-lg text-center text-sm">
@@ -824,82 +866,106 @@ export default function ClassDashboard() {
             ) : (
               <>
                 <h2 className="text-2xl font-semibold text-indigo-600 mb-4">
-                  Chi tiết lớp: {currentClass.name}
+                  Chi tiết lớp: {currentClass.name} - Mã lớp:{" "}
+                  {currentClass.code}
                 </h2>
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-medium text-lg flex items-center gap-2">
-                    <FaRegCalendarAlt /> Lịch thi
-                  </h3>
-                  {userInfo.role === "teacher" && (
-                    <button
-                      onClick={() => setShowExamModal(true)}
-                      className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
-                    >
-                      <FaPlus /> Tạo lịch thi
-                    </button>
-                  )}
-                </div>
+                {panelMode === "exam" ? (
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-medium text-lg flex items-center gap-2">
+                      <FaRegCalendarAlt /> Lịch thi
+                    </h3>
 
-                {exams.length === 0 ? (
-                  <p className="text-gray-500">Chưa có lịch nào.</p>
+                    {userInfo.role === "teacher" && (
+                      <button
+                        onClick={() => setShowExamModal(true)}
+                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                      >
+                        <FaPlus /> Tạo lịch thi
+                      </button>
+                    )}
+                  </div>
                 ) : (
-                  <ul className="space-y-3 max-h-[60vh] overflow-y-auto">
-                    {exams.map((ex) => {
-                      const status = getExamStatus(ex);
-                      return (
-                        <li
-                          key={ex._id}
-                          className="p-4 border rounded-lg hover:shadow transition flex justify-between items-center"
-                        >
-                          <div>
-                            <p className="font-semibold">{ex.name}</p>
-                            <p className="text-sm text-gray-500">
-                              Mã: {ex.code}
-                            </p>
-                            <p className="text-sm text-gray-400">
-                              {ex.start_time
-                                ? new Date(ex.start_time).toLocaleString(
-                                    "vi-VN"
-                                  )
-                                : ""}{" "}
-                              — {ex.duration} phút
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
+                  <div>
+                    <h3 className="font-medium text-lg flex items-center gap-2 mb-2">
+                      <FaUser />
+                      Danh sách sinh viên
+                    </h3>
+                  </div>
+                )}
+
+                {panelMode === "exam" ? (
+                  /* ================== HIỂN THỊ LỊCH THI (giữ nguyên) ================== */
+                  exams.length === 0 ? (
+                    <p className="text-gray-500">Chưa có lịch nào.</p>
+                  ) : (
+                    <ul className="space-y-3 max-h-[60vh] overflow-y-auto">
+                      {exams.map((ex) => {
+                        const status = getExamStatus(ex);
+                        return (
+                          <li
+                            key={ex._id}
+                            className="p-4 border rounded-lg hover:shadow transition flex justify-between items-center"
+                          >
+                            <div>
+                              <p className="font-semibold">{ex.name}</p>
+                              <p className="text-sm text-gray-500">
+                                Mã: {ex.code}
+                              </p>
+                              <p className="text-sm text-gray-400">
+                                {ex.start_time
+                                  ? new Date(ex.start_time).toLocaleString(
+                                      "vi-VN"
+                                    )
+                                  : ""}{" "}
+                                — {ex.duration} phút
+                              </p>
+                            </div>
                             <button
                               onClick={() => openExamDetail(ex)}
                               className="text-indigo-600 underline text-sm"
                             >
                               Chi tiết lịch thi
                             </button>
-                            {/* {status === "active" && (
-                              <button
-                                onClick={() =>
-                                  navigate(`/teacher_live?exam=${ex.code}`)
-                                }
-                                className="flex items-center gap-2 cursor-pointer bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl shadow-md transition-all"
-                              >
-                                <FaPlay className="text-sm" />
-                                Vào giám sát
-                              </button>
-                            )}
-                            {status === "soon" && (
-                              <span className="flex items-center gap-2 bg-gray-100 text-gray-600 px-4 py-2 rounded-xl border border-gray-300 shadow-sm">
-                                <FaClock className="text-gray-500" />
-                                Chưa đến giờ thi
-                              </span>
-                            )}
-                            {status === "done" && (
-                              <span className="flex items-center gap-2 bg-red-100 text-red-700 px-4 py-2 rounded-xl border border-red-300 shadow-sm">
-                                <FaCheckCircle className="text-red-600" />
-                                Đã kết thúc
-                              </span>
-                            )} */}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )
+                ) : (
+                  /* ================== HIỂN THỊ DANH SÁCH SINH VIÊN ================== */
+                  <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+                    {listStudentsInClass.length === 0 ? (
+                      <p className="text-gray-500">Lớp chưa có sinh viên.</p>
+                    ) : (
+                      listStudentsInClass.map((stu) => (
+                        <div
+                          key={stu._id}
+                          className="flex items-center gap-4 p-3 border rounded-lg bg-gray-50 shadow-sm"
+                        >
+                          <img
+                            src={
+                              stu.face_image
+                                ? `data:image/jpeg;base64,${stu.face_image}`
+                                : "https://via.placeholder.com/60"
+                            }
+                            className="w-14 h-14 rounded-full object-cover border"
+                          />
+
+                          <div className="flex-1">
+                            <p className="font-semibold">{stu.name}</p>
+                            <p className="text-sm text-gray-600">
+                              Mã sinh viên: {stu.student_id}
+                            </p>
+                            <p className="text-sm text-gray-600">{stu.email}</p>
+                            <p className="text-xs text-gray-400">
+                              Ngày tạo:{" "}
+                              {new Date(stu.created_at).toLocaleString("vi-VN")}
+                            </p>
                           </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 )}
               </>
             )}
@@ -1055,21 +1121,46 @@ export default function ClassDashboard() {
 
                       <input
                         type="datetime-local"
+                        min={new Date().toISOString().slice(0, 16)}
                         className="border px-3 py-2 rounded-lg w-full mb-2"
                         value={ses.start_time}
-                        onChange={(e) =>
-                          updateSessionField(idx, "start_time", e.target.value)
-                        }
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          // Lấy thời gian hiện tại (định dạng giống datetime-local)
+                          // Tạo thời gian hiện tại +7 giờ (bù lại UTC)
+                          const now = new Date();
+                          now.setHours(now.getHours() + 7);
+
+                          // Chuẩn ISO rồi cắt giống datetime-local
+                          const nowValue = now.toISOString().slice(0, 16);
+
+                          if (value < nowValue) {
+                            alert("Không được chọn thời gian trong quá khứ!");
+                            return;
+                          }
+
+                          updateSessionField(idx, "start_time", e.target.value);
+                        }}
                       />
 
                       <input
                         type="number"
+                        min={15}
+                        defaultValue={15}
                         className="border px-3 py-2 rounded-lg w-full mb-2"
                         placeholder="Thời lượng (phút)"
                         value={ses.duration}
-                        onChange={(e) =>
-                          updateSessionField(idx, "duration", e.target.value)
-                        }
+                        onChange={(e) => {
+                          const value = Number(e.target.value);
+
+                          // if (value < 15) {
+                          //   toast.error(
+                          //     "Thời lượng phải lớn hơn hoặc bằng 15 phút"
+                          //   );
+                          //   return;
+                          // }
+                          updateSessionField(idx, "duration", e.target.value);
+                        }}
                       />
                     </div>
                   ))}
@@ -1088,7 +1179,7 @@ export default function ClassDashboard() {
                   type="submit"
                   className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
                 >
-                  Tạo bài thi & ca thi
+                  Tạo lịch thi
                 </button>
               </div>
             </form>
@@ -1155,7 +1246,6 @@ export default function ClassDashboard() {
                                     examName: examDetail.name,
                                     sessionName: s.name,
                                     className: currentClass.name,
-
                                   })
                                 );
                                 navigate(
@@ -1280,23 +1370,44 @@ export default function ClassDashboard() {
               <input
                 type="datetime-local"
                 value={newSessionForm.start_time}
-                onChange={(e) =>
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Tạo thời gian hiện tại +7 giờ (bù lại UTC)
+                  const now = new Date();
+                  now.setHours(now.getHours() + 7);
+
+                  // Chuẩn ISO rồi cắt giống datetime-local
+                  const nowValue = now.toISOString().slice(0, 16);
+
+                  if (value < nowValue) {
+                    toast.error("Không được chọn thời gian ở quá khứ");
+                    return;
+                  }
+
                   setNewSessionForm((prev) => ({
                     ...prev,
                     start_time: e.target.value,
-                  }))
-                }
+                  }));
+                }}
                 className="border px-3 py-2 rounded-lg w-full"
               />
               <input
                 type="number"
+                min={15}
+                defaultValue={15}
                 value={newSessionForm.duration}
-                onChange={(e) =>
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+
+                  // if (value < 15) {
+                  //   toast.error("Thời lượng phải lớn hơn hoặc bằng 15 phút");
+                  //   return;
+                  // }
                   setNewSessionForm((prev) => ({
                     ...prev,
                     duration: e.target.value,
-                  }))
-                }
+                  }));
+                }}
                 placeholder="Thời lượng (phút)"
                 className="border px-3 py-2 rounded-lg w-full"
               />

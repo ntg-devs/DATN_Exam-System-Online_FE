@@ -256,6 +256,24 @@ export async function getStudents(payload = {}) {
   }
 }
 
+export async function getStudentsInClass({ class_id }) {
+  try {
+    const res = await fetch(API_URL + "get-students-in-class", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ class_id }),
+    });
+
+    if (!res.ok) throw new Error("Không thể lấy danh sách sinh viên thuộc lớp!");
+
+    const data = await res.json();
+    return data; // { success: true, students: [...] }
+  } catch (err) {
+    console.error("[❌] Lỗi getStudentsInClass:", err);
+    return { success: false, students: [] };
+  }
+}
+
 export async function getStudentsNotInClass({ class_id }) {
   try {
     const res = await fetch(API_URL + "get-students-not-in-class", {
