@@ -583,8 +583,10 @@ export default function ClassDashboard() {
       setExamDuration("");
       setSessions([{ start_time: "", duration: "", room: "" }]);
       // refresh exams list for current class
-      handleOpenClassDetail(currentClass);
       handleOpenClassDetailListStudent(currentClass);
+      handleOpenClassDetail(currentClass);
+
+      setPanelMode("exam");
     } catch (err) {
       console.error(err);
       notifyError("Lỗi khi tạo bài thi!");

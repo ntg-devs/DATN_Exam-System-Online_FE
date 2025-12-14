@@ -1656,7 +1656,6 @@
 //   );
 // }
 
-
 // import React, { useEffect, useRef, useState } from "react";
 // import { useSelector } from "react-redux";
 // import { useSearchParams, Link, useNavigate } from "react-router-dom";
@@ -1978,6 +1977,9 @@ import React, { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import { useSearchParams, Link, useNavigate } from "react-router-dom";
 import { LogOut, GraduationCap } from "lucide-react";
+import NotificationBell from "../components/NotificationBell";
+import toast, { Toaster } from "react-hot-toast";
+
 import { SOCKET_URL } from "../utils/path";
 
 export default function StudentLive({ fps = 4 }) {
@@ -2002,6 +2004,34 @@ export default function StudentLive({ fps = 4 }) {
   const { userInfo } = useSelector((state) => state.user);
   const verifyInfo = useSelector((state) => state.verify.verifyInfo);
   const navigate = useNavigate();
+
+  const behaviorMap = {
+    hand_move: "Di chuyển tay bất thường",
+    mobile_use: "Sử dụng điện thoại",
+    side_watching: "Nghiêng mặt sang hướng khác",
+    mouth_open: "Mở miệng trao đổi",
+    eye_movement: "Liếc mắt nhiều hướng",
+  };
+  const faceLabelMap = {
+    unknown: "Người lạ",
+    other_student: "Thi hộ – Phát hiện người khác",
+    multiple_faces: "Nhiều hơn 1 khuôn mặt",
+    no_face: "Không thấy khuôn mặt",
+    looking_away: "Nhìn ra chỗ khác quá lâu",
+    phone_detected: "Phát hiện điện thoại trong khung hình",
+  };
+  const reasonMap = {
+    multi_face: "Phát hiện nhiều khuôn mặt",
+    no_face: "Không phát hiện khuôn mặt",
+    mismatch: "Khuôn mặt không khớp",
+    unknown: "Lý do không xác định",
+  };
+
+  const getBehaviorText = (label) => {
+    return (
+      behaviorMap[label] || faceLabelMap[label] || reasonMap[label] || label
+    );
+  };
 
   /** ==========================
    *  1️⃣ KHỞI TẠO CAMERA + WS
@@ -2166,24 +2196,39 @@ export default function StudentLive({ fps = 4 }) {
         </div>
       )}
 
-      {/* === NAV === */}
-      <nav className="bg-white/80 backdrop-blur border-b shadow sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <Link to="/student_dashboard" className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-600 rounded-xl">
-              <GraduationCap className="w-7 h-7 text-white" />
-            </div>
-            <span className="text-2xl font-bold text-indigo-600">
-              Smart Exam
-            </span>
+      {/* NAVBAR */}
+      <nav className="backdrop-blur-xl bg-white/60 border-b border-indigo-200 shadow-sm sticky top-0 z-50">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
+          <Link
+            to="/student_dashboard"
+            className="font-bold text-2xl text-indigo-600 flex items-center gap-2"
+          >
+            <GraduationCap size={28} /> Smart Exam
           </Link>
 
-          <button
-            onClick={handleLogout}
-            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-full flex items-center gap-2"
-          >
-            <LogOut size={18} /> Đăng xuất
-          </button>
+          <div className="flex items-center gap-6 text-gray-700 font-medium">
+            <Link
+              to="/student_dashboard"
+              className="hover:text-indigo-600 transition"
+            >
+              Trang chủ
+            </Link>
+            <Link
+              to="/student_violation_history"
+              className="hover:text-indigo-600 transition"
+            >
+              Lịch sử vi phạm
+            </Link>
+            <NotificationBell studentId={userInfo._id} toast={toast} />
+            <button
+              onClick={() => {
+                navigate("/");
+              }}
+              className="px-3 py-2 bg-red-500 text-white rounded-xl flex items-center gap-2 hover:bg-red-600 shadow"
+            >
+              <LogOut size={18} /> Đăng xuất
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -2249,13 +2294,13 @@ export default function StudentLive({ fps = 4 }) {
               ) : (
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50">
-                    <tr>
-                      <th>#</th>
+                    <tr className="text-left">
+                      <th># Nhãn</th>
                       <th>Hành vi</th>
                       <th>Độ tin cậy</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  {/* <tbody>
                     {detections.map((d, i) => (
                       <tr key={i}>
                         <td>{i + 1}</td>
@@ -2270,9 +2315,46 @@ export default function StudentLive({ fps = 4 }) {
                             {d.label}
                           </span>
                         </td>
+                        <td></td>
                         <td>{(d.score * 100).toFixed(1)}%</td>
                       </tr>
                     ))}
+                  </tbody> */}
+
+                  <tbody>
+                    {detections.map((d, i) => {
+                      const behaviorText = getBehaviorText(d.label);
+
+                      return (
+                        <tr key={i} className="border-b mb-12">
+                          <td
+                            className={`px-2 py-1 rounded-md text-xs font-medium ${
+                              d.label === "normal"
+                                ? " text-green-700"
+                                : " text-red-700"
+                            }`}
+                          >
+                            {i + 1}: {d.label}
+                          </td>
+
+                          {/* Hành vi (đã Việt hóa) */}
+                          <td>
+                            <span
+                              className={`px-2 py-1 rounded-md text-xs font-medium ${
+                                d.label === "normal"
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-red-100 text-red-700"
+                              }`}
+                            >
+                              {behaviorText}
+                            </span>
+                          </td>
+
+                          {/* Độ tin cậy */}
+                          <td>{(d.score * 100).toFixed(1)}%</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               )}

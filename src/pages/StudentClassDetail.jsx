@@ -280,6 +280,8 @@ import toast, { Toaster } from "react-hot-toast";
 import { pushNotification } from "../redux/slices/notificationSlice";
 import { SOCKET_URL } from "../utils/path";
 
+import NotificationBell from "../components/NotificationBell";
+
 export default function StudentClassDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -461,8 +463,7 @@ export default function StudentClassDetail() {
             to="/student_dashboard"
             className="font-bold text-2xl text-indigo-600 flex items-center gap-2"
           >
-            <GraduationCap size={28} />
-            Smart Exam
+            <GraduationCap size={28} /> Smart Exam
           </Link>
 
           <div className="flex items-center gap-6 text-gray-700 font-medium">
@@ -472,16 +473,17 @@ export default function StudentClassDetail() {
             >
               Trang chủ
             </Link>
-
             <Link
-              to="/violation_history"
+              to="/student_violation_history"
               className="hover:text-indigo-600 transition"
             >
               Lịch sử vi phạm
             </Link>
-
+            <NotificationBell studentId={userInfo._id} toast={toast} />
             <button
-              onClick={logout}
+              onClick={() => {
+                navigate("/");
+              }}
               className="px-3 py-2 bg-red-500 text-white rounded-xl flex items-center gap-2 hover:bg-red-600 shadow"
             >
               <LogOut size={18} /> Đăng xuất

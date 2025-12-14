@@ -2272,6 +2272,34 @@ export default function TeacherLive() {
 
   const verifyInfo = useSelector((state) => state.verify.verifyInfo);
 
+  const behaviorMap = {
+    hand_move: "Di chuyển tay bất thường",
+    mobile_use: "Sử dụng điện thoại",
+    side_watching: "Nghiêng mặt sang hướng khác",
+    mouth_open: "Mở miệng trao đổi",
+    eye_movement: "Liếc mắt nhiều hướng",
+  };
+  const faceLabelMap = {
+    unknown: "Người lạ",
+    other_student: "Thi hộ – Phát hiện người khác",
+    multiple_faces: "Nhiều hơn 1 khuôn mặt",
+    no_face: "Không thấy khuôn mặt",
+    looking_away: "Nhìn ra chỗ khác quá lâu",
+    phone_detected: "Phát hiện điện thoại trong khung hình",
+  };
+  const reasonMap = {
+    multi_face: "Phát hiện nhiều khuôn mặt",
+    no_face: "Không phát hiện khuôn mặt",
+    mismatch: "Khuôn mặt không khớp",
+    unknown: "Lý do không xác định",
+  };
+
+  const getBehaviorText = (label) => {
+    return (
+      behaviorMap[label] || faceLabelMap[label] || reasonMap[label] || label
+    );
+  };
+
   // Logic xử lý vi phạm (giữ nguyên)
   function handleViolation(msg) {
     const item = {
@@ -2348,6 +2376,8 @@ export default function TeacherLive() {
     };
     return () => ws.close();
   }, [examId]);
+
+  console.log(listStudents);
 
   return (
     <>
@@ -2492,7 +2522,7 @@ export default function TeacherLive() {
                         )}
                       </div>
 
-                      <div className="p-4">
+                      {/* <div className="p-4">
                         <p className="text-sm font-semibold text-gray-700 mb-2">
                           Vi phạm gần đây
                         </p>
@@ -2520,6 +2550,56 @@ export default function TeacherLive() {
                             ))
                           )}
                         </div>
+                      </div> */}
+
+                      {/* ALERT HISTORY */}
+                      <div className="mt-3">
+                        <h4 className="text-xs font-semibold text-gray-700 mb-1">
+                          🚨 Vi phạm gần đây
+                        </h4>
+
+                        <div className="max-h-24 overflow-y-auto bg-gray-50 border rounded-md p-2 text-xs space-y-2">
+                          {info.alerts.length ? (
+                            info.alerts.map((a, i) => (
+                              <div className="flex justify-between">
+                                <div key={i} className="border-b pb-1">
+                                  <div className="flex gap-2">
+                                    <span className="">
+                                      Nhãn:{" "}
+                                      <span className="text-red-500">
+                                        {a.behavior}
+                                      </span>
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span>
+                                      Hành vi: {getBehaviorText(a.behavior)}
+                                    </span>
+                                  </div>
+                                  <div className="text-gray-600">
+                                    Thời gian: {(a.duration / 1000).toFixed(1)}s
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-500">
+                                      Ghi nhận lúc:{" "}
+                                      {new Date(a.ts).toLocaleTimeString()}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div>
+                                  {a.evidence && (
+                                    <img
+                                      src={a.evidence}
+                                      className="w-20 mt-1 rounded cursor-pointer hover:scale-150 transition"
+                                    />
+                                  )}
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="italic text-gray-400">Không có</p>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
@@ -2538,11 +2618,11 @@ export default function TeacherLive() {
                   onClick={() => setShowNotiModal(true)}
                   className="text-indigo-600 hover:text-indigo-800 font-medium"
                 >
-                  Xem tất cả 
+                  Xem tất cả
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto space-y-4">
+              <div className="flex-1 overflow-y-auto space-y-4 max-h-[390px]">
                 {notifications.length === 0 ? (
                   <p className="text-center text-gray-400 py-12 italic">
                     Chưa có thông báo nào
@@ -2569,13 +2649,16 @@ export default function TeacherLive() {
                           </div>
                         </div>
                         {n.duration > 0 && (
-                          <span className="text-xs bg-gray-700 text-white px-2 py-1 rounded-full">
-                            {(n.duration / 1000).toFixed(1)}s
+                          <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded-full">
+                            Thời lượng: {(n.duration / 1000).toFixed(1)}s
                           </span>
                         )}
                       </div>
                       <p className="font-semibold mt-2 text-gray-800">
-                        {n.behavior}
+                        Nhãn: {n.behavior}
+                      </p>
+                      <p className="font-semibold mt-2 text-gray-800">
+                        Hành vi: {getBehaviorText(n.behavior)}
                       </p>
                       {n.evidence && (
                         <img
@@ -2671,12 +2754,12 @@ export default function TeacherLive() {
                       .map((n, i) => (
                         <div
                           key={i}
-                          className={`rounded-2xl overflow-hidden shadow-xl border-4 ${
+                          className={`rounded-2xl overflow-hidden shadow-xl border-2 ${
                             ["unknown_face_persistent", "multi_face"].includes(
                               n.behavior
                             )
                               ? "border-red-500"
-                              : "border-orange-500"
+                              : "border-blue-500"
                           }`}
                         >
                           {n.evidence ? (
@@ -2692,13 +2775,22 @@ export default function TeacherLive() {
                             </div>
                           )}
                           <div className="p-4 bg-white">
-                            <p className="font-bold text-lg">{n.student}</p>
-                            <p className="text-sm text-gray-600">
-                              {new Date(n.ts).toLocaleString()}
+                            <p className="font-semibold text-sm">Mã SV: {n.student}</p>
+                            <p className="text-xs text-gray-600">
+                              Ghi nhận lúc: {new Date(n.ts).toLocaleString()}
                             </p>
-                            <p className="mt-2 font-semibold text-red-600">
-                              {n.behavior}
-                            </p>
+                            <div className="flex text-xs items-center gap-2 mt-2">
+                              <p>Nhãn: </p>
+                              <p className=" text-red-600">
+                                {n.behavior}
+                              </p>
+                            </div>
+                            <div className="flex text-xs items-center gap-2 mt-2">
+                              <p>Hành vi: </p>
+                              <p className="text-red-600">
+                                {getBehaviorText(n.behavior)}
+                              </p>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -2723,21 +2815,30 @@ export default function TeacherLive() {
                           <div className="flex justify-between items-start mb-3">
                             <div>
                               <h4 className="text-2xl font-bold">
-                                {n.student}
+                                Mã sinh viên: {n.student}
                               </h4>
                               <p className="text-gray-600">
-                                {new Date(n.ts).toLocaleString()}
+                                Ghi nhận lúc: {new Date(n.ts).toLocaleString()}
                               </p>
                             </div>
                             {n.duration > 0 && (
                               <span className="bg-black text-white px-4 py-2 rounded-full text-sm font-bold">
-                                {(n.duration / 1000).toFixed(1)}s
+                                Thời lượng: {(n.duration / 1000).toFixed(1)}s
                               </span>
                             )}
                           </div>
-                          <p className="text-xl font-bold text-gray-800">
-                            {n.behavior}
-                          </p>
+                          <div className="flex font-semibold items-center gap-2 mt-2">
+                              <p>Nhãn: </p>
+                              <p className=" text-red-600">
+                                {n.behavior}
+                              </p>
+                            </div>
+                            <div className="flex font-semibold items-center gap-2 mt-2">
+                              <p>Hành vi: </p>
+                              <p className="text-red-600">
+                                {getBehaviorText(n.behavior)}
+                              </p>
+                            </div>
                           {n.evidence && (
                             <img
                               src={n.evidence}
@@ -2802,10 +2903,11 @@ export default function TeacherLive() {
                             </div>
                           )}
                         </div>
-                        <h4 className="font-bold text-lg text-gray-800">
-                          {st.name || st.studentId}
-                        </h4>
-                        <p className="text-sm text-gray-600 mt-1">{st.email}</p>
+                        <h4 className="font-bold text-gray-800">{st.name}</h4>
+                        <div>Mã SV: {st.student_id}</div>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Liên hệ qua: {st.email}
+                        </p>
                       </div>
                     ))}
                   </div>
