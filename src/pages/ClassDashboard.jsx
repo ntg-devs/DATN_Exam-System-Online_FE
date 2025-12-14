@@ -1137,7 +1137,7 @@ export default function ClassDashboard() {
                           const nowValue = now.toISOString().slice(0, 16);
 
                           if (value < nowValue) {
-                            alert("Không được chọn thời gian trong quá khứ!");
+                            toast.error("Không được chọn thời gian ở quá khứ");
                             return;
                           }
 
