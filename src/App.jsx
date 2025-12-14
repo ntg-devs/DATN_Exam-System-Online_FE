@@ -109,12 +109,12 @@ function App() {
               <ProtectedRoute element={<TeacherLive />} allowedRole="teacher" />
             }
           />
-          <Route
+          {/* <Route
             path="/dashboard"
             element={
               <ProtectedRoute element={<Dashboard />} allowedRole="teacher" />
             }
-          />
+          /> */}
           <Route
             path="/class_dashboard"
             element={

@@ -250,7 +250,7 @@ export default function Home() {
         dispatch(login(res.user));
         
         if (role === "teacher") {
-          navigate("/dashboard");
+          navigate("/class_dashboard");
         } else {
           navigate("/student_register");
         }
