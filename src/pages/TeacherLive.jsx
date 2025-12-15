@@ -2232,6 +2232,7 @@ import { FaCamera } from "react-icons/fa";
 import { useSelector } from "react-redux";
 import { getStudentsInSession } from "../services/services";
 import { useEffect, useState } from "react";
+import { SOCKET_URL } from "../utils/path";
 
 // Lightbox component đơn giản (không cần thư viện)
 const Lightbox = ({ src, onClose }) => (
@@ -2336,7 +2337,7 @@ export default function TeacherLive() {
   useEffect(() => {
     getListStudentsFromExamSession();
     // const ws = new WebSocket(`ws://localhost:8000/ws/teacher?exam=${examId}`);
-    const ws = new WebSocket(`wss://https://unworkable-bernie-merely.ngrok-free.dev/ws/teacher?exam=${examId}`);
+    const ws = new WebSocket(`${SOCKET_URL}/ws/teacher?exam=${examId}`);
     // const ws = new WebSocket(`wss://103.142.24.110:8000/ws/teacher?exam=${examId}`);
     ws.onopen = () => setWsConnected(true);
     ws.onclose = () => setWsConnected(false);
