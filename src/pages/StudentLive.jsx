@@ -2000,6 +2000,8 @@ export default function StudentLive({ fps = 4 }) {
   const [params] = useSearchParams();
   const examId = params.get("exam");
   const sessionId = params.get("session");
+    const [showTeacherInfo, setShowTeacherInfo] = useState(false);
+
 
   const { userInfo } = useSelector((state) => state.user);
   const verifyInfo = useSelector((state) => state.verify.verifyInfo);
@@ -2219,6 +2221,45 @@ export default function StudentLive({ fps = 4 }) {
             >
               Lịch sử vi phạm
             </Link>
+            <div
+                  className="relative" // <-- Cần relative để pop-up absolute hoạt động đúng
+                  onMouseLeave={() => setShowTeacherInfo(false)} // Tự động ẩn khi di chuột ra ngoài
+                >
+                  <div
+                    className="flex items-center gap-3 px-4 py-2 bg-gray-100/80 rounded-full cursor-pointer hover:bg-gray-200 transition"
+                    onClick={() => setShowTeacherInfo(!showTeacherInfo)} // <-- Logic BẬT/TẮT
+                  >
+                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold">
+                      S
+                    </div>
+                  </div>
+
+                  {/* 3. POP-UP HIỂN THỊ GMAIL */}
+                  {showTeacherInfo && (
+                    <div className="absolute right-0 mt-2 p-3 w-max max-w-sm bg-white border border-gray-200 rounded-xl shadow-2xl z-50 animate-fade-in">
+                      <div className="flex gap-2 mb-2 items-center">
+                        <div className="text-sm font-semibold text-gray-700">
+                          Tài khoản sinh viên:
+                        </div>
+                        <div
+                          className="text-base text-indigo-600 font-medium hover:text-indigo-800 transition"
+                        >
+                          {userInfo.name}
+                        </div>
+                      </div>
+                      <div className="flex gap-2 items-center">
+                        <div className="text-sm font-semibold text-gray-700">
+                          Email:
+                        </div>
+                        <div
+                          className="text-base text-indigo-600 font-medium hover:text-indigo-800 transition"
+                        >
+                          {userInfo.email}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
             <NotificationBell studentId={userInfo._id} toast={toast} />
             <button
               onClick={() => {

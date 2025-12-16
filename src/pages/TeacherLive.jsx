@@ -2271,7 +2271,11 @@ export default function TeacherLive() {
   const [listStudents, setListStudents] = useState([]);
   const [lightboxSrc, setLightboxSrc] = useState(null);
 
+  const [showTeacherInfo, setShowTeacherInfo] = useState(false);
+
   const verifyInfo = useSelector((state) => state.verify.verifyInfo);
+
+  const userInfo = useSelector((state) => state.user.userInfo);
 
   const behaviorMap = {
     hand_move: "Di chuyển tay bất thường",
@@ -2412,11 +2416,44 @@ export default function TeacherLive() {
               </div>
 
               <div className="flex items-center gap-4">
-                <div className="flex items-center gap-3 px-4 py-2 bg-gray-100/80 rounded-full">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold">
-                    G
+                <div
+                  className="relative" // <-- Cần relative để pop-up absolute hoạt động đúng
+                  onMouseLeave={() => setShowTeacherInfo(false)} // Tự động ẩn khi di chuột ra ngoài
+                >
+                  <div
+                    className="flex items-center gap-3 px-4 py-2 bg-gray-100/80 rounded-full cursor-pointer hover:bg-gray-200 transition"
+                    onClick={() => setShowTeacherInfo(!showTeacherInfo)} // <-- Logic BẬT/TẮT
+                  >
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold">
+                      G
+                    </div>
                   </div>
-                  <span className="font-medium text-gray-800">Giáo viên</span>
+
+                  {/* 3. POP-UP HIỂN THỊ GMAIL */}
+                  {showTeacherInfo && (
+                    <div className="absolute right-0 mt-2 p-3 w-max max-w-sm bg-white border border-gray-200 rounded-xl shadow-2xl z-50 animate-fade-in">
+                      <div className="flex gap-2 mb-2 items-center">
+                        <div className="text-sm font-semibold text-gray-700">
+                          Tài khoản giảng viên:
+                        </div>
+                        <div
+                          className="text-base text-indigo-600 font-medium hover:text-indigo-800 transition"
+                        >
+                          {userInfo.name}
+                        </div>
+                      </div>
+                      <div className="flex gap-2 items-center">
+                        <div className="text-sm font-semibold text-gray-700">
+                          Email:
+                        </div>
+                        <div
+                          className="text-base text-indigo-600 font-medium hover:text-indigo-800 transition"
+                        >
+                          {userInfo.email}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <button className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-full shadow transition">
                   <LogOut size={18} />
@@ -2776,15 +2813,15 @@ export default function TeacherLive() {
                             </div>
                           )}
                           <div className="p-4 bg-white">
-                            <p className="font-semibold text-sm">Mã SV: {n.student}</p>
+                            <p className="font-semibold text-sm">
+                              Mã SV: {n.student}
+                            </p>
                             <p className="text-xs text-gray-600">
                               Ghi nhận lúc: {new Date(n.ts).toLocaleString()}
                             </p>
                             <div className="flex text-xs items-center gap-2 mt-2">
                               <p>Nhãn: </p>
-                              <p className=" text-red-600">
-                                {n.behavior}
-                              </p>
+                              <p className=" text-red-600">{n.behavior}</p>
                             </div>
                             <div className="flex text-xs items-center gap-2 mt-2">
                               <p>Hành vi: </p>
@@ -2829,17 +2866,15 @@ export default function TeacherLive() {
                             )}
                           </div>
                           <div className="flex font-semibold items-center gap-2 mt-2">
-                              <p>Nhãn: </p>
-                              <p className=" text-red-600">
-                                {n.behavior}
-                              </p>
-                            </div>
-                            <div className="flex font-semibold items-center gap-2 mt-2">
-                              <p>Hành vi: </p>
-                              <p className="text-red-600">
-                                {getBehaviorText(n.behavior)}
-                              </p>
-                            </div>
+                            <p>Nhãn: </p>
+                            <p className=" text-red-600">{n.behavior}</p>
+                          </div>
+                          <div className="flex font-semibold items-center gap-2 mt-2">
+                            <p>Hành vi: </p>
+                            <p className="text-red-600">
+                              {getBehaviorText(n.behavior)}
+                            </p>
+                          </div>
                           {n.evidence && (
                             <img
                               src={n.evidence}

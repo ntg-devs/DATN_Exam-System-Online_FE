@@ -1925,13 +1925,12 @@ const getReasonText = (reason) => {
 };
 
 const behaviorMap = {
-    hand_move: "Di chuyển tay bất thường",
-    mobile_use: "Sử dụng điện thoại",
-    side_watching: "Nghiêng mặt sang hướng khác",
-    mouth_open: "Mở miệng trao đổi",
-    eye_movement: "Liếc mắt nhiều hướng",
-  };
-
+  hand_move: "Di chuyển tay bất thường",
+  mobile_use: "Sử dụng điện thoại",
+  side_watching: "Nghiêng mặt sang hướng khác",
+  mouth_open: "Mở miệng trao đổi",
+  eye_movement: "Liếc mắt nhiều hướng",
+};
 
 export default function TeacherViolationHistory() {
   const [data, setData] = useState(null);
@@ -1944,6 +1943,7 @@ export default function TeacherViolationHistory() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [modalData, setModalData] = useState(null); // chứa studentGroup khi mở modal
+  const [showTeacherInfo, setShowTeacherInfo] = useState(false);
 
   const userInfo = useSelector((state) => state.user.userInfo);
 
@@ -1952,7 +1952,6 @@ export default function TeacherViolationHistory() {
     const fetchData = async () => {
       setIsLoading(true);
       const res = await getInfoViolation({ teacher_id: userInfo?._id });
-      console.log(res);
       setData(res);
       setIsLoading(false);
     };
@@ -2060,6 +2059,41 @@ export default function TeacherViolationHistory() {
             >
               Lịch sử vi phạm
             </Link>
+            <div
+              className="relative" // <-- Cần relative để pop-up absolute hoạt động đúng
+              onMouseLeave={() => setShowTeacherInfo(false)} // Tự động ẩn khi di chuột ra ngoài
+            >
+              <div
+                className="flex items-center gap-3 px-4 py-2 bg-gray-100/80 rounded-full cursor-pointer hover:bg-gray-200 transition"
+                onClick={() => setShowTeacherInfo(!showTeacherInfo)} // <-- Logic BẬT/TẮT
+              >
+                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold">
+                  G
+                </div>
+              </div>
+
+              {/* 3. POP-UP HIỂN THỊ GMAIL */}
+              {showTeacherInfo && (
+                <div className="absolute right-0 mt-2 p-3 w-max max-w-sm bg-white border border-gray-200 rounded-xl shadow-2xl z-50 animate-fade-in">
+                  <div className="flex gap-2 mb-2 items-center">
+                    <div className="text-sm font-semibold text-gray-700">
+                      Tài khoản giảng viên:
+                    </div>
+                    <div className="text-base text-indigo-600 font-medium hover:text-indigo-800 transition">
+                      {userInfo.name}
+                    </div>
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    <div className="text-sm font-semibold text-gray-700">
+                      Email:
+                    </div>
+                    <div className="text-base text-indigo-600 font-medium hover:text-indigo-800 transition">
+                      {userInfo.email}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <button className="px-3 py-2 bg-red-500 text-white rounded-xl flex items-center gap-2 hover:bg-red-600 shadow">
               <LogOut size={18} /> Đăng xuất
@@ -2131,7 +2165,9 @@ export default function TeacherViolationHistory() {
             </h2>
 
             {filteredClasses.length === 0 ? (
-              <p className="text-gray-400 italic text-sm">Không tìm thấy lớp nào</p>
+              <p className="text-gray-400 italic text-sm">
+                Không tìm thấy lớp nào
+              </p>
             ) : (
               <div className="flex flex-col gap-3">
                 {filteredClasses.map((cls) => (
@@ -2152,8 +2188,12 @@ export default function TeacherViolationHistory() {
                       {cls.class_name.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1">
-                      <span className="text-sm font-medium">{cls.class_name}</span>
-                      <span className="block text-xs text-gray-500 mt-0.5">{cls.class_code}</span>
+                      <span className="text-sm font-medium">
+                        {cls.class_name}
+                      </span>
+                      <span className="block text-xs text-gray-500 mt-0.5">
+                        {cls.class_code}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -2172,44 +2212,62 @@ export default function TeacherViolationHistory() {
             </div>
           ) : searchStudent.trim() !== "" ? (
             filteredViolationsByStudent.length === 0 ? (
-              <p className="text-gray-500 italic text-sm">Không tìm thấy vi phạm của sinh viên này</p>
+              <p className="text-gray-500 italic text-sm">
+                Không tìm thấy vi phạm của sinh viên này
+              </p>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {paginateViolations(filteredViolationsByStudent).map((v, idx) => {
-                  const { color, icon } = getBehaviorStyle(v.behavior);
-                  return (
-                    <div
-                      key={idx}
-                      className="bg-gray-50 rounded-xl p-4 shadow-sm hover:shadow-md transition flex flex-col gap-2"
-                    >
-                      <p className="font-semibold text-gray-800 text-sm">
-                        Học sinh: <span className="text-blue-600">{v.student}</span>
-                      </p>
-                      <p className="text-xs text-gray-500">Lớp: {v.class_name} | Kỳ thi: {v.exam_name}</p>
+                {paginateViolations(filteredViolationsByStudent).map(
+                  (v, idx) => {
+                    const { color, icon } = getBehaviorStyle(v.behavior);
+                    return (
+                      <div
+                        key={idx}
+                        className="bg-gray-50 rounded-xl p-4 shadow-sm hover:shadow-md transition flex flex-col gap-2"
+                      >
+                        <p className="font-semibold text-gray-800 text-sm">
+                          Học sinh:{" "}
+                          <span className="text-blue-600">{v.student}</span>
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Lớp: {v.class_name} | Kỳ thi: {v.exam_name}
+                        </p>
 
-                      <div className={`font-medium text-sm ${color} px-2 py-1 rounded-lg flex items-center`}>
-                        {icon} Hành vi: {v.behavior || "Phát hiện khuôn mặt khác"}
+                        <div
+                          className={`font-medium text-sm ${color} px-2 py-1 rounded-lg flex items-center`}
+                        >
+                          {icon} Hành vi:{" "}
+                          {v.behavior || "Phát hiện khuôn mặt khác"}
+                        </div>
+
+                        {v.reason && (
+                          <p className="text-gray-700 text-sm">
+                            Lý do: {getReasonText(v.reason)}
+                          </p>
+                        )}
+
+                        <p className="text-gray-700 text-sm">
+                          Điểm: {v.score?.toFixed(2)}
+                        </p>
+                        <p className="text-gray-700 text-sm">
+                          Thời gian: {(v.duration_ms / 1000).toFixed(2)}s
+                        </p>
+                        <p className="text-gray-500 text-xs">
+                          Ghi nhận: {new Date(v.timestamp).toLocaleString()}
+                        </p>
+                        {v.evidence && (
+                          <img
+                            src={v.evidence}
+                            alt="evidence"
+                            loading="lazy"
+                            className="w-full h-32 object-cover rounded-xl border transition hover:scale-105 cursor-pointer"
+                            onClick={() => window.open(v.evidence, "_blank")}
+                          />
+                        )}
                       </div>
-
-                      {v.reason && (
-                        <p className="text-gray-700 text-sm">Lý do: {getReasonText(v.reason)}</p>
-                      )}
-
-                      <p className="text-gray-700 text-sm">Điểm: {v.score?.toFixed(2)}</p>
-                      <p className="text-gray-700 text-sm">Thời gian: {(v.duration_ms / 1000).toFixed(2)}s</p>
-                      <p className="text-gray-500 text-xs">Ghi nhận: {new Date(v.timestamp).toLocaleString()}</p>
-                      {v.evidence && (
-                        <img
-                          src={v.evidence}
-                          alt="evidence"
-                          loading="lazy"
-                          className="w-full h-32 object-cover rounded-xl border transition hover:scale-105 cursor-pointer"
-                          onClick={() => window.open(v.evidence, "_blank")}
-                        />
-                      )}
-                    </div>
-                  );
-                })}
+                    );
+                  }
+                )}
               </div>
             )
           ) : selectedClass ? (
@@ -2221,7 +2279,9 @@ export default function TeacherViolationHistory() {
                     key={exam.exam}
                     onClick={() => setSelectedExam(exam)}
                     className={`px-4 py-2 rounded-full font-medium transition ${
-                      selectedExam?.exam === exam.exam ? "bg-blue-600 text-white shadow-md" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      selectedExam?.exam === exam.exam
+                        ? "bg-blue-600 text-white shadow-md"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                     }`}
                   >
                     {exam.exam_name}
@@ -2232,12 +2292,18 @@ export default function TeacherViolationHistory() {
               {/* Hiển thị vi phạm với nhóm sinh viên */}
               {selectedExam ? (
                 selectedExam.violations.length === 0 ? (
-                  <p className="text-gray-500 italic text-sm">Không có vi phạm</p>
+                  <p className="text-gray-500 italic text-sm">
+                    Không có vi phạm
+                  </p>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                     {Object.values(
                       selectedExam.violations.reduce((acc, v) => {
-                        if (!acc[v.student]) acc[v.student] = { student: v.student, violations: [] };
+                        if (!acc[v.student])
+                          acc[v.student] = {
+                            student: v.student,
+                            violations: [],
+                          };
                         acc[v.student].violations.push(v);
                         return acc;
                       }, {})
@@ -2252,11 +2318,15 @@ export default function TeacherViolationHistory() {
                   </div>
                 )
               ) : (
-                <p className="text-gray-500 italic text-sm">Chọn kỳ thi để xem vi phạm</p>
+                <p className="text-gray-500 italic text-sm">
+                  Chọn kỳ thi để xem vi phạm
+                </p>
               )}
             </>
           ) : (
-            <p className="text-gray-500 italic text-sm">Chọn lớp để xem lịch sử vi phạm</p>
+            <p className="text-gray-500 italic text-sm">
+              Chọn lớp để xem lịch sử vi phạm
+            </p>
           )}
         </div>
       </div>
@@ -2267,8 +2337,18 @@ export default function TeacherViolationHistory() {
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
           className="fixed bottom-5 right-5 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7" />
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M5 15l7-7 7 7"
+            />
           </svg>
         </button>
       )}
@@ -2277,39 +2357,73 @@ export default function TeacherViolationHistory() {
       {modalData && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl max-w-3xl w-full p-6 shadow-lg relative max-h-[80vh]">
-            <button onClick={() => setModalData(null)} className="absolute top-3 right-3 text-gray-500 hover:text-gray-800 text-lg">
+            <button
+              onClick={() => setModalData(null)}
+              className="absolute top-3 right-3 text-gray-500 hover:text-gray-800 text-lg"
+            >
               &times;
             </button>
             <h2 className="text-lg font-semibold mb-4">
-              Vi phạm của: <span className="text-blue-600">{modalData.student}</span>
+              Vi phạm của:{" "}
+              <span className="text-blue-600">{modalData.student}</span>
             </h2>
             <div className="flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
               {modalData.violations.map((v, idx) => {
-                const { color, icon } = getBehaviorStyle(v.behavior || "unknown");
+                const { color, icon } = getBehaviorStyle(
+                  v.behavior || "unknown"
+                );
                 return (
-                  <div key={idx} className="flex flex-col md:flex-row gap-4 border-b pb-4 last:border-b-0">
+                  <div
+                    key={idx}
+                    className="flex flex-col md:flex-row gap-4 border-b pb-4 last:border-b-0"
+                  >
                     {/* Thông tin */}
                     <div className="flex-1 flex flex-col gap-1">
-                      <div className={`font-medium text-sm ${color} px-2 py-1 rounded-lg flex items-center`}>
-                        {icon} Hành vi: {behaviorMap[v.behavior] || "Phát hiện nhiều khuôn mặt khác" }
+                      <div
+                        className={`font-medium text-sm ${color} px-2 py-1 rounded-lg flex items-center`}
+                      >
+                        {icon} Hành vi:{" "}
+                        {behaviorMap[v.behavior] ||
+                          "Phát hiện nhiều khuôn mặt khác"}
                       </div>
 
-                      {v.reason && <p className="text-gray-700 text-sm">Lý do: {getReasonText(v.reason)}</p>}
+                      {v.reason && (
+                        <p className="text-gray-700 text-sm">
+                          Lý do: {getReasonText(v.reason)}
+                        </p>
+                      )}
 
-                      {v.score !== undefined && <p className="text-gray-700 text-sm">Điểm: {v.score.toFixed(2)}</p>}
-                      {v.duration_ms !== undefined && <p className="text-gray-700 text-sm">Thời gian: {(v.duration_ms / 1000).toFixed(2)}s</p>}
+                      {v.score !== undefined && (
+                        <p className="text-gray-700 text-sm">
+                          Điểm: {v.score.toFixed(2)}
+                        </p>
+                      )}
+                      {v.duration_ms !== undefined && (
+                        <p className="text-gray-700 text-sm">
+                          Thời gian: {(v.duration_ms / 1000).toFixed(2)}s
+                        </p>
+                      )}
                       <p className="text-gray-500 text-xs">
                         Ghi nhận:{" "}
-                        {new Date(new Date(v.timestamp).getTime() + 7 * 60 * 60 * 1000).toLocaleString()}
+                        {new Date(
+                          new Date(v.timestamp).getTime() + 7 * 60 * 60 * 1000
+                        ).toLocaleString()}
                       </p>
 
                       {/* Hiển thị faces */}
                       {v.faces && v.faces.length > 0 && (
                         <div className="flex flex-wrap gap-2 mt-2">
                           {v.faces.map((f, fIdx) => (
-                            <div key={fIdx} className="border rounded-md p-1 flex flex-col items-center text-xs bg-gray-50">
-                              <div className="text-gray-600">Face {fIdx + 1}</div>
-                              <div>Độ tương đồng: {f.similarity.toFixed(2)}</div>
+                            <div
+                              key={fIdx}
+                              className="border rounded-md p-1 flex flex-col items-center text-xs bg-gray-50"
+                            >
+                              <div className="text-gray-600">
+                                Face {fIdx + 1}
+                              </div>
+                              <div>
+                                Độ tương đồng: {f.similarity.toFixed(2)}
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -2339,28 +2453,43 @@ export default function TeacherViolationHistory() {
 // Component con: hiển thị violation theo sinh viên với toggle "Xem tất cả"
 function StudentViolationCard({ studentGroup, getBehaviorStyle, onViewAll }) {
   const [firstViolation, ...restViolations] = studentGroup.violations;
-  const { color, icon } = getBehaviorStyle(firstViolation.behavior || "unknown");
+  const { color, icon } = getBehaviorStyle(
+    firstViolation.behavior || "unknown"
+  );
 
   return (
     <div className="bg-gray-50 rounded-xl p-4 shadow-sm flex flex-col gap-2">
       <p className="font-semibold text-gray-800 text-sm">
-        Học sinh: <span className="text-blue-600">{firstViolation.student}</span>
+        Học sinh:{" "}
+        <span className="text-blue-600">{firstViolation.student}</span>
       </p>
 
       {/* Lý do / Hành vi */}
       {firstViolation.reason ? (
-        <div className={`font-medium text-sm ${color} px-2 py-1 rounded-lg flex items-center`}>
-          <span className="text-gray-700 text-xs">Lý do: {getReasonText(firstViolation.reason)}</span>
+        <div
+          className={`font-medium text-sm ${color} px-2 py-1 rounded-lg flex items-center`}
+        >
+          <span className="text-gray-700 text-xs">
+            Lý do: {getReasonText(firstViolation.reason)}
+          </span>
         </div>
       ) : (
-        <div className={`font-medium text-sm ${color} px-2 py-1 rounded-lg flex items-center`}>
+        <div
+          className={`font-medium text-sm ${color} px-2 py-1 rounded-lg flex items-center`}
+        >
           Hành vi: {behaviorMap[firstViolation.behavior] || v.behavior}
         </div>
       )}
 
-      {firstViolation.score !== undefined && <p className="text-gray-700 text-sm">Điểm: {firstViolation.score.toFixed(2)}</p>}
+      {firstViolation.score !== undefined && (
+        <p className="text-gray-700 text-sm">
+          Điểm: {firstViolation.score.toFixed(2)}
+        </p>
+      )}
       {firstViolation.duration_ms !== undefined && (
-        <p className="text-gray-700 text-sm">Thời gian: {(firstViolation.duration_ms / 1000).toFixed(2)}s</p>
+        <p className="text-gray-700 text-sm">
+          Thời gian: {(firstViolation.duration_ms / 1000).toFixed(2)}s
+        </p>
       )}
 
       {/* Faces thumbnail */}
@@ -2375,7 +2504,10 @@ function StudentViolationCard({ studentGroup, getBehaviorStyle, onViewAll }) {
       )}
 
       {restViolations.length > 0 && (
-        <button onClick={() => onViewAll(studentGroup)} className="mt-2 text-sm text-blue-600 hover:underline">
+        <button
+          onClick={() => onViewAll(studentGroup)}
+          className="mt-2 text-sm text-blue-600 hover:underline"
+        >
           Xem tất cả ({restViolations.length + 1})
         </button>
       )}
