@@ -1911,6 +1911,8 @@ const getReasonText = (reason) => {
       return "Phát hiện nhiều khuôn mặt";
     case "no_face":
       return "Không phát hiện khuôn mặt";
+    case "mismatch_face":
+      return "Phát hiện người thi hộ";
     case "unknown_face":
       return "Khuôn mặt không trùng khớp";
     case "look_away":
@@ -2097,7 +2099,7 @@ export default function TeacherViolationHistory() {
               <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg" />
               <input
                 type="text"
-                placeholder="Tìm mã sinh viên..."
+                placeholder="Tìm kiếm theo mã sinh viên..."
                 value={searchStudent}
                 onChange={(e) => setSearchStudent(e.target.value)}
                 className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400 shadow-sm transition placeholder-gray-400 text-sm"
@@ -2193,7 +2195,7 @@ export default function TeacherViolationHistory() {
                         <p className="text-gray-700 text-sm">Lý do: {getReasonText(v.reason)}</p>
                       )}
 
-                      <p className="text-gray-700 text-sm">Điểm: {v.score.toFixed(2)}</p>
+                      <p className="text-gray-700 text-sm">Điểm: {v.score?.toFixed(2)}</p>
                       <p className="text-gray-700 text-sm">Thời gian: {(v.duration_ms / 1000).toFixed(2)}s</p>
                       <p className="text-gray-500 text-xs">Ghi nhận: {new Date(v.timestamp).toLocaleString()}</p>
                       {v.evidence && (
