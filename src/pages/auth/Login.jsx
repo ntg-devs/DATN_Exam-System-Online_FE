@@ -3,9 +3,9 @@ import { motion } from "framer-motion";
 import { MdSchool, MdLock } from "react-icons/md";
 import toast, { Toaster } from "react-hot-toast";
 import { useDispatch } from "react-redux";
-import { login } from "../redux/slices/userSlice.js";
+import { login } from "../../redux/slices/userSlice.js";
 import { useNavigate } from "react-router-dom";
-import { teacherLogin } from "../services/services.js"; // 👈 bạn cần tạo API tương ứng ở services
+import { teacherLogin } from "../../services/services.js"; // 👈 bạn cần tạo API tương ứng ở services
 
 export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -32,10 +32,12 @@ export default function Login() {
         toast.success("🎉 Đăng nhập thành công!");
         dispatch(login(res.user)); // Lưu thông tin vào Redux
         if (res?.user.role == "student") {
-          navigate("/student_dashboard")
+          // Vào trang chủ sinh viên (không bắt buộc đăng ký danh tính ngay)
+          navigate("/student_dashboard");
+        } else if (res?.user.role == "admin") {
+          navigate("/admin");
         } else {
           navigate("/class_dashboard"); // Chuyển đến trang quản lý
-
         }
       } else {
         toast.error(res.detail || "Sai email hoặc mật khẩu!");
@@ -54,7 +56,11 @@ export default function Login() {
         position="top-center"
         toastOptions={{
           duration: 3000,
-          style: { fontSize: "15px", borderRadius: "10px", padding: "10px 16px" },
+          style: {
+            fontSize: "15px",
+            borderRadius: "10px",
+            padding: "10px 16px",
+          },
         }}
       />
 
@@ -70,7 +76,9 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-gray-700 mb-1 font-medium">Email</label>
+            <label className="block text-gray-700 mb-1 font-medium">
+              Email
+            </label>
             <input
               type="email"
               name="email"
@@ -110,12 +118,12 @@ export default function Login() {
           </motion.button>
         </form>
 
-        <p className="text-center mt-6 text-sm text-gray-600">
+        {/* <p className="text-center mt-6 text-sm text-gray-600">
           Chưa có tài khoản?{" "}
           <a href="/" className="text-green-600 font-semibold hover:underline">
             Đăng ký ngay
           </a>
-        </p>
+        </p> */}
       </motion.div>
     </div>
   );
