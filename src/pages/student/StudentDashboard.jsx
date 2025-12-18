@@ -45,9 +45,11 @@ export default function StudentDashboard() {
         setJoinedClassIds(joinedIds);
         
         // Gộp cả lớp đã tham gia và chưa tham gia thành một danh sách
+        // const allClasses = [
+        //   ...(res?.joinedClasses || []),
+        //   ...(res?.notJoinedClasses || [])
         const allClasses = [
-          ...(res?.joinedClasses || []),
-          ...(res?.notJoinedClasses || [])
+          ...(res?.joinedClasses || [])
         ];
         setMyClasses(allClasses);
       } else {

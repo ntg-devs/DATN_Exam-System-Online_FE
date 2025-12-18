@@ -2287,7 +2287,8 @@ export default function AdminDashboard() {
                                 <div>
                                   <p className="font-semibold">Ca: {s.name}</p>
                                   <p className="text-sm text-slate-600">
-                                    Bắt đầu: {new Date(s.start_time).toLocaleString("vi-VN")}
+                                    Bắt đầu: {new Date(new Date(s.start_time).getTime() + 7 * 60 * 60 * 1000).toLocaleString("vi-VN")}
+
                                   </p>
                                   <p className="text-sm text-slate-500">
                                     Thời lượng: {s.duration} phút

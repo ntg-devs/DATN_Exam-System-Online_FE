@@ -33,6 +33,10 @@ export default function Login() {
         dispatch(login(res.user)); // Lưu thông tin vào Redux
         if (res?.user.role == "student") {
           // Vào trang chủ sinh viên (không bắt buộc đăng ký danh tính ngay)
+          if (!res?.user.face_registered && !res?.user.face_image) {
+            navigate("/student_register");
+            return;
+          }
           navigate("/student_dashboard");
         } else if (res?.user.role == "admin") {
           navigate("/admin");
