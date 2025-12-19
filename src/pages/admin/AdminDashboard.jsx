@@ -3551,7 +3551,7 @@ export default function AdminDashboard() {
                 <MdSchool className="text-xl" />
               </div>
               <div>
-                <h1 className="text-lg font-bold tracking-wide">Online Exam</h1>
+                <h1 className="text-lg font-bold tracking-wide">Online Smart Exam</h1>
                 <p className="text-xs text-indigo-100">Bảng điều khiển Admin</p>
               </div>
             </div>
