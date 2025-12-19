@@ -241,7 +241,7 @@ function FaceRegister() {
             ws.close();
           } else if (data.type === "face_register_pending") {
             // Đang xử lý
-            setStatus("Hệ thống đang xử lý video...");
+            setStatus("Quá trình đăng ký khuôn mặt đăng được xử lý vui lòng đợi trong chốc lát...");
           }
         };
 
@@ -366,10 +366,12 @@ function FaceRegister() {
               <b>Để bảo vệ dữ liệu cá nhân video của bạn sẽ không được lưu trữ.</b> Sau khi hoàn tất
               quá trình đăng ký, video sẽ được xóa khỏi máy chủ. 
             </p>
+            <p className="text-gray-700 leading-relaxed mb-4">
+              <b>Sau khi đăng ký khuôn mặt thành công bạn sẽ được vào hệ thống.</b>
+            </p>
 
             <p className="text-gray-700 leading-relaxed mb-6">
-              Nhấn <b>“Đồng ý”</b> để tiếp tục, hoặc <b>“Từ chối”</b> nếu
-              bạn không muốn sử dụng dịch vụ.
+              Nhấn <b>“Đồng ý”</b> để tiếp tục.
             </p>
 
             {/* BUTTON GROUP */}

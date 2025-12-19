@@ -149,6 +149,24 @@ export async function deleteUser(id) {
     return { success: false, detail: err.message };
   }
 }
+export async function toggleAccountStatus(id) {
+  try {
+    console.log(id)
+    const res = await fetch(API_URL + "toggle-user-status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Thay đổi trạng thái tài khoản thất bại!");
+
+    return data; // { success: true }
+  } catch (err) {
+    console.error("[❌] Lỗi deleteUser:", err);
+    return { success: false, detail: err.message };
+  }
+}
 export async function getAccountByFace(payload) {
   try {
     const res = await fetch(API_URL + "login_face", {
@@ -492,6 +510,7 @@ export async function getStudentViolations(student_code) {
     return { success: false, detail: err.message, violations: [] };
   }
 }
+
 
 
 export async function addStudentsToExamSession(payload) {

@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useSelector } from "react-redux";
-import { getStudentViolations } from "../../services/services";
+import { getStudentViolations } from "../../services/services.js";
 import { FiSearch } from "react-icons/fi";
 import { FaBook, FaExclamationTriangle, FaClock } from "react-icons/fa";
 import { GraduationCap, LogOut } from "lucide-react";

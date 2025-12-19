@@ -130,6 +130,8 @@ export default function StudentLive({ fps = 4 }) {
     const ws = new WebSocket(
       `${SOCKET_URL}/ws/student?exam=${examId}&student=${userInfo.student_id}&class_id=${verifyInfo.classId}&session=${sessionId}`
     );
+
+    console.log(examId, userInfo.student_id, verifyInfo.classId, sessionId);
     // const ws = new WebSocket(
     //   `wss://https://unworkable-bernie-merely.ngrok-free.dev/ws/student?exam=${examId}&student=${userInfo.student_id}&class_id=${verifyInfo.classId}&session=${sessionId}`
     // );

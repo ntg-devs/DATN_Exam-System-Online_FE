@@ -1,7 +1,33 @@
 import React, { useState, useEffect } from "react";
-import { FiUsers, FiBook, FiBarChart2, FiFileText, FiX, FiSearch, FiEdit2, FiTrash2, FiDownload } from "react-icons/fi";
-import { MdSchool, MdPerson, MdClose, MdGroups, MdAssignment } from "react-icons/md";
-import { FaPlus, FaUser,FaEye, FaUserPlus, FaRegCalendarAlt, FaPlay, FaClock, FaCheckCircle, FaGraduationCap } from "react-icons/fa";
+import {
+  FiUsers,
+  FiBook,
+  FiBarChart2,
+  FiFileText,
+  FiX,
+  FiSearch,
+  FiEdit2,
+  FiTrash2,
+  FiDownload,
+} from "react-icons/fi";
+import {
+  MdSchool,
+  MdPerson,
+  MdClose,
+  MdGroups,
+  MdAssignment,
+} from "react-icons/md";
+import {
+  FaPlus,
+  FaUser,
+  FaEye,
+  FaUserPlus,
+  FaRegCalendarAlt,
+  FaPlay,
+  FaClock,
+  FaCheckCircle,
+  FaGraduationCap,
+} from "react-icons/fa";
 import toast, { Toaster } from "react-hot-toast";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
@@ -42,6 +68,7 @@ import {
   getStudentsInSession,
   getExams,
   generateReport,
+  toggleAccountStatus,
 } from "../../services/services.js";
 
 const menuItems = [
@@ -58,6 +85,9 @@ export default function AdminDashboard() {
   const [accounts, setAccounts] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const [showStatusConfirm, setShowStatusConfirm] = useState(false);
+  const [statusTarget, setStatusTarget] = useState(null);
 
   // Sửa tài khoản
   const [showEditModal, setShowEditModal] = useState(false);
@@ -97,12 +127,14 @@ export default function AdminDashboard() {
   const [teachers, setTeachers] = useState([]);
   const [currentSubject, setCurrentSubject] = useState(null);
   const [subjectPanelMode, setSubjectPanelMode] = useState("students"); // "students" | "exams"
-  
+
   // Thêm sinh viên vào môn học
   const [showAddStudentsModal, setShowAddStudentsModal] = useState(false);
   const [availableStudents, setAvailableStudents] = useState([]);
-  const [selectedStudentsForSubject, setSelectedStudentsForSubject] = useState([]);
-  
+  const [selectedStudentsForSubject, setSelectedStudentsForSubject] = useState(
+    []
+  );
+
   // Tạo bài thi
   const [showCreateExamModal, setShowCreateExamModal] = useState(false);
   const [examForm, setExamForm] = useState({
@@ -111,30 +143,36 @@ export default function AdminDashboard() {
     start_time: "",
     duration: "",
   });
-  const [examSessions, setExamSessions] = useState([{ start_time: "", duration: "" }]);
-  
+  const [examSessions, setExamSessions] = useState([
+    { start_time: "", duration: "" },
+  ]);
+
   // Chi tiết bài thi
   const [showExamDetailModal, setShowExamDetailModal] = useState(false);
   const [currentExam, setCurrentExam] = useState(null);
   const [examSessionsList, setExamSessionsList] = useState([]);
-  
+
   // Thêm ca thi
   const [showAddSessionModal, setShowAddSessionModal] = useState(false);
   const [newSessionForm, setNewSessionForm] = useState({
     start_time: "",
     duration: "",
   });
-  
+
   // Thêm sinh viên vào ca thi
-  const [showAddStudentsToSessionModal, setShowAddStudentsToSessionModal] = useState(false);
+  const [showAddStudentsToSessionModal, setShowAddStudentsToSessionModal] =
+    useState(false);
   const [targetSession, setTargetSession] = useState(null);
   const [studentsNotInSession, setStudentsNotInSession] = useState([]);
-  const [selectedStudentsForSession, setSelectedStudentsForSession] = useState([]);
-  
+  const [selectedStudentsForSession, setSelectedStudentsForSession] = useState(
+    []
+  );
+
   // Xem sinh viên trong ca thi
-  const [showStudentsInSessionModal, setShowStudentsInSessionModal] = useState(false);
+  const [showStudentsInSessionModal, setShowStudentsInSessionModal] =
+    useState(false);
   const [studentsInSession, setStudentsInSession] = useState([]);
-  
+
   // Danh sách sinh viên trong môn học
   const [studentsInSubject, setStudentsInSubject] = useState([]);
   const [examsInSubject, setExamsInSubject] = useState([]);
@@ -185,7 +223,11 @@ export default function AdminDashboard() {
       setLoading(true);
       const res = await getAllUsers(); // Lấy tất cả users (không filter)
       if (res.success) {
-        setAccounts(res.users || []);
+        // setAccounts(res.users || []);
+        const filteredUsers = (res.users || []).filter(
+          (user) => user.email !== "admin@gmail.com"
+        );
+        setAccounts(filteredUsers);
       } else {
         toast.error("Không thể tải danh sách tài khoản!");
       }
@@ -234,7 +276,11 @@ export default function AdminDashboard() {
       const res = await createAccount(payload);
 
       if (res.success) {
-        toast.success(`🎉 Tạo tài khoản ${role === "teacher" ? "giảng viên" : "sinh viên"} thành công!`);
+        toast.success(
+          `🎉 Tạo tài khoản ${
+            role === "teacher" ? "giảng viên" : "sinh viên"
+          } thành công!`
+        );
         setShowCreateModal(false);
         setForm({
           name: "",
@@ -306,6 +352,40 @@ export default function AdminDashboard() {
     }
   };
 
+  const openStatusConfirm = (acc) => {
+    setStatusTarget(acc);
+    setShowStatusConfirm(true);
+  };
+
+  const handleToggleStatus = async () => {
+    if (!statusTarget?._id) return;
+
+    setLoading(true);
+    try {
+      // res ở đây thực chất là data từ backend, không phải Response
+      const result = await toggleAccountStatus(statusTarget._id);
+
+      // Không cần res.json() nữa vì result đã là object
+      if (result.success) {
+        toast.success(
+          result.new_status
+            ? "Kích hoạt tài khoản thành công!"
+            : "Vô hiệu hóa tài khoản thành công!"
+        );
+        setShowStatusConfirm(false);
+        setStatusTarget(null);
+        await fetchAccounts(); // Refresh danh sách
+      } else {
+        toast.error(result.detail || "Thao tác thất bại!");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Lỗi khi thay đổi trạng thái!");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const openDeleteConfirm = (acc) => {
     setDeleteTarget(acc);
     setShowDeleteConfirm(true);
@@ -336,7 +416,7 @@ export default function AdminDashboard() {
   // ================================
   // 🎓 QUẢN LÝ MÔN HỌC - Functions
   // ================================
-  
+
   const fetchSubjects = async () => {
     try {
       setLoading(true);
@@ -371,7 +451,7 @@ export default function AdminDashboard() {
       const examsData = await getExams();
       const examsList = examsData?.exams || examsData || [];
       setAllExams(examsList);
-      
+
       // Fetch tất cả sessions cho mỗi exam
       const allSessionsData = [];
       for (const exam of examsList) {
@@ -394,9 +474,11 @@ export default function AdminDashboard() {
     if (!currentSubject) return;
     try {
       // Load sinh viên trong môn học
-      const studentsRes = await getStudentsInClass({ class_id: currentSubject._id });
+      const studentsRes = await getStudentsInClass({
+        class_id: currentSubject._id,
+      });
       setStudentsInSubject(studentsRes?.students || []);
-      
+
       // Load bài thi của môn học
       const examsRes = await getExamsByClass({ class_id: currentSubject._id });
       setExamsInSubject(examsRes?.exams || []);
@@ -488,8 +570,10 @@ export default function AdminDashboard() {
       toast.error("Vui lòng nhập tên và mã bài thi!");
       return;
     }
-    
-    const validSessions = examSessions.filter((s) => s.start_time && s.duration);
+
+    const validSessions = examSessions.filter(
+      (s) => s.start_time && s.duration
+    );
     if (!validSessions.length) {
       toast.error("Vui lòng thêm ít nhất 1 ca thi!");
       return;
@@ -503,7 +587,8 @@ export default function AdminDashboard() {
         name: examForm.name,
         code: examForm.code,
         start_time: examForm.start_time || validSessions[0].start_time,
-        duration: Number(examForm.duration) || Number(validSessions[0].duration),
+        duration:
+          Number(examForm.duration) || Number(validSessions[0].duration),
         created_by: currentSubject.teacher_id, // Admin tạo nhưng gán cho giảng viên
       });
 
@@ -653,16 +738,16 @@ export default function AdminDashboard() {
 
   const getSessionStatus = (session) => {
     const OFFSET = 7 * 60 * 60 * 1000;
-  
-    const now = Date.now() 
-  
+
+    const now = Date.now();
+
     const start = new Date(session.start_time).getTime() + OFFSET;
-  
+
     const end = start + session.duration * 60 * 1000;
-  
+
     if (now >= start && now <= end) return "active"; // đang diễn ra
-    if (now < start) return "soon";   // chưa đến giờ
-    if (now > end) return "done";     // đã kết thúc
+    if (now < start) return "soon"; // chưa đến giờ
+    if (now > end) return "done"; // đã kết thúc
     return "";
   };
 
@@ -685,9 +770,9 @@ export default function AdminDashboard() {
   // Mapping tên hành vi vi phạm
   const getBehaviorName = (behavior, type) => {
     if (!behavior) return "N/A";
-    
+
     const behaviorStr = behavior.toString().toLowerCase();
-    
+
     // Vi phạm về nhận diện (face)
     if (type === "face") {
       switch (behaviorStr) {
@@ -704,7 +789,7 @@ export default function AdminDashboard() {
           return behavior;
       }
     }
-    
+
     // Vi phạm về hành vi (behavior)
     switch (behaviorStr) {
       case "mobile_use":
@@ -785,7 +870,10 @@ export default function AdminDashboard() {
     for (let i = 6; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
-      const dateStr = date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
+      const dateStr = date.toLocaleDateString("vi-VN", {
+        day: "2-digit",
+        month: "2-digit",
+      });
       last7Days.push({ date: dateStr, exams: 0 });
     }
 
@@ -794,7 +882,10 @@ export default function AdminDashboard() {
         const examDate = new Date(exam.created_at);
         const daysDiff = Math.floor((today - examDate) / (1000 * 60 * 60 * 24));
         if (daysDiff >= 0 && daysDiff <= 6) {
-          const dateStr = examDate.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
+          const dateStr = examDate.toLocaleDateString("vi-VN", {
+            day: "2-digit",
+            month: "2-digit",
+          });
           const dayData = last7Days.find((d) => d.date === dateStr);
           if (dayData) dayData.exams++;
         }
@@ -816,6 +907,7 @@ export default function AdminDashboard() {
       const res = await generateReport(reportFilters);
       if (res.success) {
         setReportData(res.report);
+        console.log(res.report);
         toast.success("Tạo báo cáo thành công!");
       } else {
         toast.error(res.detail || "Không thể tạo báo cáo!");
@@ -836,7 +928,6 @@ export default function AdminDashboard() {
     }
 
     try {
-
       // Tạo workbook
       const wb = XLSX.utils.book_new();
 
@@ -875,19 +966,21 @@ export default function AdminDashboard() {
       ];
       reportData.violations.forEach((v, index) => {
         // Lấy behavior display name
-        const behaviorName = v.behavior_display || getBehaviorName(v.behavior, v.type);
-        
+        const behaviorName =
+          v.behavior_display || getBehaviorName(v.behavior, v.type);
+
         // Lấy mô tả chi tiết
         let detailDescription = "";
         if (v.type === "behavior") {
           detailDescription = `Vi phạm hành vi: ${behaviorName}`;
           if (v.score) detailDescription += ` (Điểm: ${v.score})`;
-          if (v.duration_ms) detailDescription += ` - Thời lượng: ${v.duration_ms}ms`;
+          if (v.duration_ms)
+            detailDescription += ` - Thời lượng: ${v.duration_ms}ms`;
         } else if (v.type === "face") {
           detailDescription = `Vi phạm nhận diện: ${behaviorName}`;
           if (v.reason) detailDescription += ` - ${v.reason}`;
         }
-        
+
         violationsData.push([
           index + 1,
           v.timestamp ? new Date(v.timestamp).toLocaleString("vi-VN") : "N/A",
@@ -897,7 +990,11 @@ export default function AdminDashboard() {
           v.class_code || "N/A",
           v.exam_name || "N/A",
           v.exam_code || "N/A",
-          v.type === "behavior" ? "Hành vi" : v.type === "face" ? "Nhận diện" : "N/A",
+          v.type === "behavior"
+            ? "Hành vi"
+            : v.type === "face"
+            ? "Nhận diện"
+            : "N/A",
           behaviorName,
           detailDescription,
           v.score || "N/A",
@@ -906,35 +1003,42 @@ export default function AdminDashboard() {
         ]);
       });
       const ws2 = XLSX.utils.aoa_to_sheet(violationsData);
-      
+
       // Tự động điều chỉnh độ rộng cột
       const colWidths = [
-        { wch: 5 },   // STT
-        { wch: 20 },  // Thời gian
-        { wch: 25 },  // Sinh viên
-        { wch: 12 },  // Mã SV
-        { wch: 30 },  // Môn học
-        { wch: 12 },  // Mã môn học
-        { wch: 30 },  // Kỳ thi
-        { wch: 12 },  // Mã kỳ thi
-        { wch: 15 },  // Loại vi phạm
-        { wch: 40 },  // Hành vi
-        { wch: 60 },  // Mô tả chi tiết
-        { wch: 10 },  // Điểm số
-        { wch: 15 },  // Thời lượng
-        { wch: 40 },  // Lý do
+        { wch: 5 }, // STT
+        { wch: 20 }, // Thời gian
+        { wch: 25 }, // Sinh viên
+        { wch: 12 }, // Mã SV
+        { wch: 30 }, // Môn học
+        { wch: 12 }, // Mã môn học
+        { wch: 30 }, // Kỳ thi
+        { wch: 12 }, // Mã kỳ thi
+        { wch: 15 }, // Loại vi phạm
+        { wch: 40 }, // Hành vi
+        { wch: 60 }, // Mô tả chi tiết
+        { wch: 10 }, // Điểm số
+        { wch: 15 }, // Thời lượng
+        { wch: 40 }, // Lý do
       ];
-      ws2['!cols'] = colWidths;
-      
+      ws2["!cols"] = colWidths;
+
       XLSX.utils.book_append_sheet(wb, ws2, "Chi tiết vi phạm");
 
       // Sheet 3: Thống kê theo môn học
       const classStatsData = [
         ["Môn học", "Tổng vi phạm", "Vi phạm hành vi", "Vi phạm nhận diện"],
       ];
-      Object.entries(reportData.class_statistics).forEach(([className, stats]) => {
-        classStatsData.push([className, stats.total, stats.behavior, stats.face]);
-      });
+      Object.entries(reportData.class_statistics).forEach(
+        ([className, stats]) => {
+          classStatsData.push([
+            className,
+            stats.total,
+            stats.behavior,
+            stats.face,
+          ]);
+        }
+      );
       const ws3 = XLSX.utils.aoa_to_sheet(classStatsData);
       XLSX.utils.book_append_sheet(wb, ws3, "Thống kê theo môn học");
 
@@ -942,9 +1046,16 @@ export default function AdminDashboard() {
       const studentStatsData = [
         ["Sinh viên", "Tổng vi phạm", "Vi phạm hành vi", "Vi phạm nhận diện"],
       ];
-      Object.entries(reportData.student_statistics).forEach(([studentName, stats]) => {
-        studentStatsData.push([studentName, stats.total, stats.behavior, stats.face]);
-      });
+      Object.entries(reportData.student_statistics).forEach(
+        ([studentName, stats]) => {
+          studentStatsData.push([
+            studentName,
+            stats.total,
+            stats.behavior,
+            stats.face,
+          ]);
+        }
+      );
       const ws4 = XLSX.utils.aoa_to_sheet(studentStatsData);
       XLSX.utils.book_append_sheet(wb, ws4, "Thống kê theo sinh viên");
 
@@ -976,7 +1087,9 @@ export default function AdminDashboard() {
       case "accounts":
         return (
           <div className="space-y-5">
-            <h2 className="text-xl font-semibold text-slate-800">Quản lý tài khoản</h2>
+            <h2 className="text-xl font-semibold text-slate-800">
+              Quản lý tài khoản
+            </h2>
 
             {/* Thống kê nhanh */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
@@ -992,7 +1105,9 @@ export default function AdminDashboard() {
                   <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
                     Tổng tài khoản
                   </p>
-                  <p className="text-4xl font-bold text-slate-900 mb-1">{totalAccounts}</p>
+                  <p className="text-4xl font-bold text-slate-900 mb-1">
+                    {totalAccounts}
+                  </p>
                   <p className="text-xs text-slate-500">Tất cả người dùng</p>
                 </div>
               </div>
@@ -1009,8 +1124,12 @@ export default function AdminDashboard() {
                   <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600 mb-2">
                     Giảng viên
                   </p>
-                  <p className="text-4xl font-bold text-emerald-900 mb-1">{totalTeachers}</p>
-                  <p className="text-xs text-emerald-600">Giáo viên trong hệ thống</p>
+                  <p className="text-4xl font-bold text-emerald-900 mb-1">
+                    {totalTeachers}
+                  </p>
+                  <p className="text-xs text-emerald-600">
+                    Giáo viên trong hệ thống
+                  </p>
                 </div>
               </div>
 
@@ -1026,8 +1145,12 @@ export default function AdminDashboard() {
                   <p className="text-xs font-semibold uppercase tracking-wider text-blue-600 mb-2">
                     Sinh viên
                   </p>
-                  <p className="text-4xl font-bold text-blue-900 mb-1">{totalStudents}</p>
-                  <p className="text-xs text-blue-600">Học sinh trong hệ thống</p>
+                  <p className="text-4xl font-bold text-blue-900 mb-1">
+                    {totalStudents}
+                  </p>
+                  <p className="text-xs text-blue-600">
+                    Học sinh trong hệ thống
+                  </p>
                 </div>
               </div>
             </div>
@@ -1035,7 +1158,10 @@ export default function AdminDashboard() {
             {/* Thanh tìm kiếm + nút tạo */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="relative w-full sm:max-w-md">
-                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <FiSearch
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={18}
+                />
                 <input
                   type="text"
                   value={searchTerm}
@@ -1070,10 +1196,13 @@ export default function AdminDashboard() {
                       <th className="px-6 py-4 font-semibold text-slate-700 uppercase text-xs tracking-wider">
                         Vai trò
                       </th>
-                      <th className="px-6 py-4 font-semibold text-slate-700 uppercase text-xs tracking-wider">
+                      <th className="px-2 py-4 font-semibold text-slate-700 uppercase text-xs tracking-wider">
                         Ngày tạo
                       </th>
-                      <th className="px-6 py-4 font-semibold text-slate-700 uppercase text-xs tracking-wider text-right">
+                      <th className="px-6 py-4 font-semibold text-slate-700 uppercase text-xs tracking-wider">
+                        Trạng thái
+                      </th>
+                      <th className="px-2 py-4 font-semibold text-slate-700 uppercase text-xs tracking-wider text-center">
                         Hành động
                       </th>
                     </tr>
@@ -1094,7 +1223,9 @@ export default function AdminDashboard() {
                           <div className="flex flex-col items-center gap-3">
                             <FiUsers className="text-gray-300" size={48} />
                             <p className="text-slate-500 text-lg font-medium">
-                              {searchTerm ? "Không tìm thấy tài khoản nào" : "Chưa có tài khoản nào"}
+                              {searchTerm
+                                ? "Không tìm thấy tài khoản nào"
+                                : "Chưa có tài khoản nào"}
                             </p>
                             {!searchTerm && (
                               <button
@@ -1131,14 +1262,18 @@ export default function AdminDashboard() {
                           >
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-sm">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-sm">
                                   {(acc.name || "U").charAt(0).toUpperCase()}
                                 </div>
-                                <span className="font-semibold text-slate-800">{acc.name || "-"}</span>
+                                <span className="font-semibold text-xs text-slate-800">
+                                  {acc.name || "-"}
+                                </span>
                               </div>
                             </td>
                             <td className="px-6 py-4">
-                              <span className="text-slate-700">{acc.email || "-"}</span>
+                              <span className="text-slate-700">
+                                {acc.email || "-"}
+                              </span>
                             </td>
                             <td className="px-6 py-4">
                               <span className="text-slate-700 font-mono text-xs">
@@ -1162,24 +1297,55 @@ export default function AdminDashboard() {
                                   : "Sinh viên"}
                               </span>
                             </td>
-                            <td className="px-6 py-4">
-                              <span className="text-sm text-slate-600">
+                            <td className="px-2 py-4">
+                              <span className="text-xs text-slate-600">
                                 {formatDate(acc.created_at)}
                               </span>
                             </td>
                             <td className="px-6 py-4">
-                              <div className="flex items-center justify-end gap-3">
+                              <span
+                                className={`inline-flex items-center px-1 py-1.5 rounded-full text-xs font-semibold w-[109px] ${
+                                  acc.is_active === false ||
+                                  acc.is_active == null
+                                    ? "bg-red-100 text-red-700 border border-red-200"
+                                    : "bg-green-100 text-green-700 border border-green-200"
+                                }`}
+                              >
+                                {acc.is_active === false ||
+                                acc.is_active == null
+                                  ? "Không hoạt động"
+                                  : "Hoạt động"}
+                              </span>
+                            </td>
+                            <td className="px-2 py-4">
+                              <div className="flex items-center justify-end gap-1">
                                 <button
                                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-indigo-600 hover:bg-indigo-50 transition-colors"
                                   onClick={() => openEditModal(acc)}
                                 >
                                   <FiEdit2 size={14} /> Sửa
                                 </button>
-                                <button
+                                {/* <button
                                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
                                   onClick={() => openDeleteConfirm(acc)}
                                 >
                                   <FiTrash2 size={14} /> Xóa
+                                </button> */}
+                                <button
+                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                    acc.is_active === false ||
+                                    acc.is_active == null
+                                      ? "text-green-600 hover:bg-green-50"
+                                      : "text-red-600 hover:bg-red-50"
+                                  }`}
+                                  onClick={() => openStatusConfirm(acc)}
+                                >
+                                  {acc.is_active === false ||
+                                  acc.is_active == null ? (
+                                    <> Kích hoạt</>
+                                  ) : (
+                                    <> Vô hiệu hóa</>
+                                  )}
                                 </button>
                               </div>
                             </td>
@@ -1207,7 +1373,9 @@ export default function AdminDashboard() {
                     <FiX size={24} />
                   </button>
 
-                  <h2 className="text-xl font-semibold mb-4">Tạo tài khoản mới</h2>
+                  <h2 className="text-xl font-semibold mb-4">
+                    Tạo tài khoản mới
+                  </h2>
 
                   {/* Chọn vai trò */}
                   <div className="flex justify-center mb-6 space-x-4">
@@ -1292,10 +1460,14 @@ export default function AdminDashboard() {
                     {/* Thông báo mật khẩu mặc định */}
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                       <p className="text-sm text-blue-800">
-                        <strong>Mật khẩu mặc định:</strong> <code className="bg-blue-100 px-2 py-1 rounded">123456</code>
+                        <strong>Mật khẩu mặc định:</strong>{" "}
+                        <code className="bg-blue-100 px-2 py-1 rounded">
+                          123456
+                        </code>
                       </p>
                       <p className="text-xs text-blue-600 mt-1">
-                        Người dùng sẽ được yêu cầu đổi mật khẩu khi đăng nhập lần đầu.
+                        Người dùng sẽ được yêu cầu đổi mật khẩu khi đăng nhập
+                        lần đầu.
                       </p>
                     </div>
 
@@ -1330,7 +1502,7 @@ export default function AdminDashboard() {
             )}
 
             {/* Xác nhận xóa tài khoản */}
-            {showDeleteConfirm && deleteTarget && (
+            {/* {showDeleteConfirm && deleteTarget && (
               <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                 <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-sm relative">
                   <button
@@ -1349,7 +1521,8 @@ export default function AdminDashboard() {
                   <p className="text-sm text-gray-700 mb-4">
                     Bạn có chắc chắn muốn xóa tài khoản{" "}
                     <span className="font-semibold">{deleteTarget.name}</span> (
-                    {deleteTarget.email}) không? Hành động này không thể hoàn tác.
+                    {deleteTarget.email}) không? Hành động này không thể hoàn
+                    tác.
                   </p>
 
                   <div className="flex justify-end gap-3">
@@ -1378,6 +1551,76 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               </div>
+            )} */}
+
+            {showStatusConfirm && statusTarget && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-sm relative">
+                  <button
+                    onClick={() => {
+                      setShowStatusConfirm(false);
+                      setStatusTarget(null);
+                    }}
+                    className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+                  >
+                    <FiX size={24} />
+                  </button>
+                  <h2
+                    className={`text-lg font-semibold mb-3 ${
+                      statusTarget.is_active ? "text-red-600" : "text-green-600"
+                    }`}
+                  >
+                    {statusTarget.is_active
+                      ? "Vô hiệu hóa tài khoản"
+                      : "Kích hoạt tài khoản"}
+                  </h2>
+                  <p className="text-sm text-gray-700 mb-4">
+                    Bạn có chắc chắn muốn{" "}
+                    <span className="font-semibold">
+                      {statusTarget.is_active ? "vô hiệu hóa" : "kích hoạt"}
+                    </span>{" "}
+                    tài khoản{" "}
+                    <span className="font-semibold">{statusTarget.name}</span> (
+                    {statusTarget.email}) không?
+                  </p>
+                  {statusTarget.is_active === false && (
+                    <p className="text-xs text-gray-600 mb-4">
+                      Khi kích hoạt lại, người dùng sẽ có thể đăng nhập bình
+                      thường.
+                    </p>
+                  )}
+                  <div className="flex justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowStatusConfirm(false);
+                        setStatusTarget(null);
+                      }}
+                      className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleToggleStatus}
+                      disabled={loading}
+                      className={`px-4 py-2 rounded-lg text-white text-sm ${
+                        loading
+                          ? "bg-gray-400 cursor-not-allowed"
+                          : statusTarget.is_active
+                          ? "bg-red-600 hover:bg-red-700"
+                          : "bg-green-600 hover:bg-green-700"
+                      }`}
+                    >
+                      {loading
+                        ? "Đang xử lý..."
+                        : statusTarget.is_active
+                        ? "Vô hiệu hóa"
+                        : "Kích hoạt"}
+                    </button>
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* Modal sửa tài khoản */}
@@ -1391,7 +1634,9 @@ export default function AdminDashboard() {
                     <FiX size={24} />
                   </button>
 
-                  <h2 className="text-xl font-semibold mb-4">Sửa thông tin tài khoản</h2>
+                  <h2 className="text-xl font-semibold mb-4">
+                    Sửa thông tin tài khoản
+                  </h2>
 
                   {/* Chọn vai trò */}
                   <div className="flex justify-center mb-6 space-x-4">
@@ -1500,16 +1745,24 @@ export default function AdminDashboard() {
       case "subjects":
         // Thống kê nhanh
         const totalSubjects = subjects.length;
-        const totalTeachersInSubjects = new Set(subjects.map((s) => s.teacher_id)).size;
-        const totalStudentsInSubjects = subjects.reduce((sum, s) => sum + (s.students?.length || 0), 0);
+        const totalTeachersInSubjects = new Set(
+          subjects.map((s) => s.teacher_id)
+        ).size;
+        const totalStudentsInSubjects = subjects.reduce(
+          (sum, s) => sum + (s.students?.length || 0),
+          0
+        );
 
         return (
           <div className="space-y-6">
             {/* Header với thống kê */}
             <div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">Quản lý môn học</h2>
+              <h2 className="text-2xl font-bold text-slate-900 mb-2">
+                Quản lý môn học
+              </h2>
               <p className="text-sm text-slate-600">
-                Phân công giảng viên, quản lý sinh viên và tạo lịch thi cho từng môn học
+                Phân công giảng viên, quản lý sinh viên và tạo lịch thi cho từng
+                môn học
               </p>
             </div>
 
@@ -1521,7 +1774,9 @@ export default function AdminDashboard() {
                     <p className="text-xs font-medium uppercase tracking-wide text-emerald-700 mb-1">
                       Tổng môn học
                     </p>
-                    <p className="text-3xl font-bold text-emerald-900">{totalSubjects}</p>
+                    <p className="text-3xl font-bold text-emerald-900">
+                      {totalSubjects}
+                    </p>
                   </div>
                   <div className="p-3 bg-emerald-200 rounded-lg">
                     <FiBook className="text-emerald-700" size={24} />
@@ -1534,7 +1789,9 @@ export default function AdminDashboard() {
                     <p className="text-xs font-medium uppercase tracking-wide text-blue-700 mb-1">
                       Giảng viên
                     </p>
-                    <p className="text-3xl font-bold text-blue-900">{totalTeachersInSubjects}</p>
+                    <p className="text-3xl font-bold text-blue-900">
+                      {totalTeachersInSubjects}
+                    </p>
                   </div>
                   <div className="p-3 bg-blue-200 rounded-lg">
                     <MdSchool className="text-blue-700" size={24} />
@@ -1547,7 +1804,9 @@ export default function AdminDashboard() {
                     <p className="text-xs font-medium uppercase tracking-wide text-purple-700 mb-1">
                       Tổng sinh viên
                     </p>
-                    <p className="text-3xl font-bold text-purple-900">{totalStudentsInSubjects}</p>
+                    <p className="text-3xl font-bold text-purple-900">
+                      {totalStudentsInSubjects}
+                    </p>
                   </div>
                   <div className="p-3 bg-purple-200 rounded-lg">
                     <MdGroups className="text-purple-700" size={24} />
@@ -1563,7 +1822,10 @@ export default function AdminDashboard() {
                 {/* Thanh tìm kiếm và nút tạo */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="relative flex-1 sm:max-w-xs">
-                    <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <FiSearch
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                      size={18}
+                    />
                     <input
                       type="text"
                       value={subjectSearchTerm}
@@ -1586,13 +1848,20 @@ export default function AdminDashboard() {
                     {loading && subjects.length === 0 ? (
                       <div className="p-12 text-center">
                         <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mb-3"></div>
-                        <p className="text-slate-500">Đang tải danh sách môn học...</p>
+                        <p className="text-slate-500">
+                          Đang tải danh sách môn học...
+                        </p>
                       </div>
                     ) : filteredSubjects.length === 0 ? (
                       <div className="p-12 text-center">
-                        <FiBook className="mx-auto text-slate-300 mb-3" size={48} />
+                        <FiBook
+                          className="mx-auto text-slate-300 mb-3"
+                          size={48}
+                        />
                         <p className="text-slate-500 font-medium">
-                          {subjectSearchTerm ? "Không tìm thấy môn học nào" : "Chưa có môn học nào"}
+                          {subjectSearchTerm
+                            ? "Không tìm thấy môn học nào"
+                            : "Chưa có môn học nào"}
                         </p>
                         {!subjectSearchTerm && (
                           <button
@@ -1626,7 +1895,9 @@ export default function AdminDashboard() {
                               >
                                 <FiBook
                                   className={
-                                    currentSubject?._id === subj._id ? "text-emerald-700" : "text-slate-600"
+                                    currentSubject?._id === subj._id
+                                      ? "text-emerald-700"
+                                      : "text-slate-600"
                                   }
                                   size={24}
                                 />
@@ -1636,7 +1907,9 @@ export default function AdminDashboard() {
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="flex-1">
-                                    <h3 className="font-bold text-slate-900 text-lg mb-1">{subj.name}</h3>
+                                    <h3 className="font-bold text-slate-900 text-lg mb-1">
+                                      {subj.name}
+                                    </h3>
                                     <div className="flex items-center gap-2 mb-2">
                                       <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-xs font-medium">
                                         {subj.code}
@@ -1644,15 +1917,23 @@ export default function AdminDashboard() {
                                     </div>
                                     <div className="space-y-1">
                                       <div className="flex items-center gap-2 text-sm">
-                                        <MdSchool className="text-slate-400" size={16} />
+                                        <MdSchool
+                                          className="text-slate-400"
+                                          size={16}
+                                        />
                                         <span className="text-slate-600">
                                           {subj.teacher_name || (
-                                            <span className="text-slate-400 italic">Chưa phân công</span>
+                                            <span className="text-slate-400 italic">
+                                              Chưa phân công
+                                            </span>
                                           )}
                                         </span>
                                       </div>
                                       <div className="flex items-center gap-2 text-sm">
-                                        <MdGroups className="text-slate-400" size={16} />
+                                        <MdGroups
+                                          className="text-slate-400"
+                                          size={16}
+                                        />
                                         <span className="text-slate-600">
                                           {subj.students?.length || 0} sinh viên
                                         </span>
@@ -1689,7 +1970,9 @@ export default function AdminDashboard() {
                       <div className="inline-flex p-4 bg-slate-100 rounded-full mb-4">
                         <FiBook className="text-slate-400" size={48} />
                       </div>
-                      <p className="text-slate-500 font-medium mb-1">Chưa chọn môn học</p>
+                      <p className="text-slate-500 font-medium mb-1">
+                        Chưa chọn môn học
+                      </p>
                       <p className="text-sm text-slate-400">
                         Chọn một môn học từ danh sách bên trái để xem chi tiết
                       </p>
@@ -1706,17 +1989,26 @@ export default function AdminDashboard() {
                               <FiBook className="text-emerald-700" size={20} />
                             </div>
                             <div>
-                              <h3 className="text-xl font-bold text-slate-900">{currentSubject.name}</h3>
-                              <p className="text-sm text-slate-600 font-mono">{currentSubject.code}</p>
+                              <h3 className="text-xl font-bold text-slate-900">
+                                {currentSubject.name}
+                              </h3>
+                              <p className="text-sm text-slate-600 font-mono">
+                                {currentSubject.code}
+                              </p>
                             </div>
                           </div>
                           <div className="flex items-center gap-4 mt-3">
                             <div className="flex items-center gap-2 text-sm text-slate-600">
-                              <MdSchool className="text-emerald-600" size={18} />
+                              <MdSchool
+                                className="text-emerald-600"
+                                size={18}
+                              />
                               <span>
                                 <span className="font-medium">Giảng viên:</span>{" "}
                                 {currentSubject.teacher_name || (
-                                  <span className="text-slate-400 italic">Chưa phân công</span>
+                                  <span className="text-slate-400 italic">
+                                    Chưa phân công
+                                  </span>
                                 )}
                               </span>
                             </div>
@@ -1759,18 +2051,22 @@ export default function AdminDashboard() {
 
                     {/* Content */}
                     <div className="flex-1 p-6 overflow-y-auto">
-
                       {subjectPanelMode === "students" ? (
                         <div className="space-y-4">
                           <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-2">
-                              <MdGroups className="text-emerald-600" size={20} />
+                              <MdGroups
+                                className="text-emerald-600"
+                                size={20}
+                              />
                               <p className="text-sm font-semibold text-slate-700">
                                 {studentsInSubject.length} sinh viên
                               </p>
                             </div>
                             <button
-                              onClick={() => handleOpenAddStudentsModal(currentSubject)}
+                              onClick={() =>
+                                handleOpenAddStudentsModal(currentSubject)
+                              }
                               className="flex items-center gap-2 bg-purple-500 hover:bg-purple-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm transition-all hover:shadow active:scale-95"
                             >
                               <FaUserPlus size={12} /> Thêm sinh viên
@@ -1781,12 +2077,16 @@ export default function AdminDashboard() {
                               <div className="inline-flex p-4 bg-slate-100 rounded-full mb-4">
                                 <FaUser className="text-slate-400" size={32} />
                               </div>
-                              <p className="text-slate-500 font-medium mb-1">Chưa có sinh viên nào</p>
+                              <p className="text-slate-500 font-medium mb-1">
+                                Chưa có sinh viên nào
+                              </p>
                               <p className="text-sm text-slate-400 mb-4">
                                 Thêm sinh viên vào môn học này để bắt đầu
                               </p>
                               <button
-                                onClick={() => handleOpenAddStudentsModal(currentSubject)}
+                                onClick={() =>
+                                  handleOpenAddStudentsModal(currentSubject)
+                                }
                                 className="inline-flex items-center gap-2 bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-all hover:shadow"
                               >
                                 <FaUserPlus /> Thêm sinh viên
@@ -1804,23 +2104,34 @@ export default function AdminDashboard() {
                                       src={
                                         stu.face_image
                                           ? `data:image/jpeg;base64,${stu.face_image}`
-                                          : "https://ui-avatars.com/api/?name=" + encodeURIComponent(stu.name)
+                                          : "https://ui-avatars.com/api/?name=" +
+                                            encodeURIComponent(stu.name)
                                       }
                                       className="w-14 h-14 rounded-full object-cover border-2 border-slate-200 group-hover:border-emerald-300 transition-colors"
                                       alt={stu.name}
                                     />
                                     <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center">
-                                      <FaUser className="text-white" size={10} />
+                                      <FaUser
+                                        className="text-white"
+                                        size={10}
+                                      />
                                     </div>
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <p className="font-bold text-slate-900 mb-1 truncate">{stu.name}</p>
+                                    <p className="font-bold text-slate-900 mb-1 truncate">
+                                      {stu.name}
+                                    </p>
                                     <div className="flex items-center gap-3 text-xs text-slate-600">
                                       <span className="flex items-center gap-1">
-                                        <span className="font-medium">MSSV:</span> {stu.student_id}
+                                        <span className="font-medium">
+                                          MSSV:
+                                        </span>{" "}
+                                        {stu.student_id}
                                       </span>
                                     </div>
-                                    <p className="text-xs text-slate-500 truncate mt-1">{stu.email}</p>
+                                    <p className="text-xs text-slate-500 truncate mt-1">
+                                      {stu.email}
+                                    </p>
                                   </div>
                                 </div>
                               ))}
@@ -1831,7 +2142,10 @@ export default function AdminDashboard() {
                         <div className="space-y-4">
                           <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-2">
-                              <MdAssignment className="text-blue-600" size={20} />
+                              <MdAssignment
+                                className="text-blue-600"
+                                size={20}
+                              />
                               <p className="text-sm font-semibold text-slate-700">
                                 {examsInSubject.length} bài thi
                               </p>
@@ -1846,9 +2160,14 @@ export default function AdminDashboard() {
                           {examsInSubject.length === 0 ? (
                             <div className="text-center py-12">
                               <div className="inline-flex p-4 bg-slate-100 rounded-full mb-4">
-                                <FaRegCalendarAlt className="text-slate-400" size={32} />
+                                <FaRegCalendarAlt
+                                  className="text-slate-400"
+                                  size={32}
+                                />
                               </div>
-                              <p className="text-slate-500 font-medium mb-1">Chưa có bài thi nào</p>
+                              <p className="text-slate-500 font-medium mb-1">
+                                Chưa có bài thi nào
+                              </p>
                               <p className="text-sm text-slate-400 mb-4">
                                 Tạo bài thi đầu tiên cho môn học này
                               </p>
@@ -1870,10 +2189,15 @@ export default function AdminDashboard() {
                                   <div className="flex items-start justify-between gap-4">
                                     <div className="flex items-start gap-3 flex-1">
                                       <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
-                                        <FaRegCalendarAlt className="text-blue-600" size={20} />
+                                        <FaRegCalendarAlt
+                                          className="text-blue-600"
+                                          size={20}
+                                        />
                                       </div>
                                       <div className="flex-1 min-w-0">
-                                        <h4 className="font-bold text-slate-900 mb-1">{exam.name}</h4>
+                                        <h4 className="font-bold text-slate-900 mb-1">
+                                          {exam.name}
+                                        </h4>
                                         <div className="flex items-center gap-2 mb-2">
                                           <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-xs font-mono">
                                             {exam.code}
@@ -1882,7 +2206,9 @@ export default function AdminDashboard() {
                                         {exam.start_time && (
                                           <p className="text-xs text-slate-500 flex items-center gap-1">
                                             <FaClock size={12} />
-                                            {new Date(exam.start_time).toLocaleString("vi-VN")}
+                                            {new Date(
+                                              exam.start_time
+                                            ).toLocaleString("vi-VN")}
                                           </p>
                                         )}
                                       </div>
@@ -1916,7 +2242,12 @@ export default function AdminDashboard() {
                   <button
                     onClick={() => {
                       setShowCreateSubjectModal(false);
-                      setSubjectForm({ name: "", code: "", teacher_id: "", description: "" });
+                      setSubjectForm({
+                        name: "",
+                        code: "",
+                        teacher_id: "",
+                        description: "",
+                      });
                     }}
                     className="absolute top-5 right-5 text-slate-400 hover:text-slate-600 transition-colors p-1 hover:bg-slate-100 rounded-lg"
                   >
@@ -1927,8 +2258,12 @@ export default function AdminDashboard() {
                       <FiBook className="text-emerald-600" size={24} />
                     </div>
                     <div>
-                      <h2 className="text-2xl font-bold text-slate-900">Tạo môn học mới</h2>
-                      <p className="text-sm text-slate-500">Phân công giảng viên và thiết lập môn học</p>
+                      <h2 className="text-2xl font-bold text-slate-900">
+                        Tạo môn học mới
+                      </h2>
+                      <p className="text-sm text-slate-500">
+                        Phân công giảng viên và thiết lập môn học
+                      </p>
                     </div>
                   </div>
                   <form onSubmit={handleCreateSubject} className="space-y-5">
@@ -1940,7 +2275,10 @@ export default function AdminDashboard() {
                         type="text"
                         value={subjectForm.name}
                         onChange={(e) =>
-                          setSubjectForm({ ...subjectForm, name: e.target.value })
+                          setSubjectForm({
+                            ...subjectForm,
+                            name: e.target.value,
+                          })
                         }
                         placeholder="VD: Cấu trúc dữ liệu"
                         className="w-full px-4 py-3 border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all text-sm"
@@ -1955,7 +2293,10 @@ export default function AdminDashboard() {
                         type="text"
                         value={subjectForm.code}
                         onChange={(e) =>
-                          setSubjectForm({ ...subjectForm, code: e.target.value })
+                          setSubjectForm({
+                            ...subjectForm,
+                            code: e.target.value,
+                          })
                         }
                         placeholder="VD: CT101"
                         className="w-full px-4 py-3 border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all text-sm font-mono"
@@ -1964,12 +2305,16 @@ export default function AdminDashboard() {
                     </div>
                     <div>
                       <label className="block text-sm font-semibold mb-2 text-slate-700">
-                        Phân công giảng viên <span className="text-red-500">*</span>
+                        Phân công giảng viên{" "}
+                        <span className="text-red-500">*</span>
                       </label>
                       <select
                         value={subjectForm.teacher_id}
                         onChange={(e) =>
-                          setSubjectForm({ ...subjectForm, teacher_id: e.target.value })
+                          setSubjectForm({
+                            ...subjectForm,
+                            teacher_id: e.target.value,
+                          })
                         }
                         className="w-full px-4 py-3 border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all text-sm"
                         required
@@ -1989,7 +2334,10 @@ export default function AdminDashboard() {
                       <textarea
                         value={subjectForm.description}
                         onChange={(e) =>
-                          setSubjectForm({ ...subjectForm, description: e.target.value })
+                          setSubjectForm({
+                            ...subjectForm,
+                            description: e.target.value,
+                          })
                         }
                         placeholder="Mô tả về môn học..."
                         className="w-full px-4 py-3 border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all text-sm resize-none"
@@ -2001,7 +2349,12 @@ export default function AdminDashboard() {
                         type="button"
                         onClick={() => {
                           setShowCreateSubjectModal(false);
-                          setSubjectForm({ name: "", code: "", teacher_id: "", description: "" });
+                          setSubjectForm({
+                            name: "",
+                            code: "",
+                            teacher_id: "",
+                            description: "",
+                          });
                         }}
                         className="px-5 py-2.5 border border-slate-300 rounded-xl hover:bg-slate-50 font-medium text-slate-700 transition-all"
                       >
@@ -2039,19 +2392,27 @@ export default function AdminDashboard() {
                       <FaUserPlus className="text-purple-600" size={24} />
                     </div>
                     <div>
-                      <h2 className="text-2xl font-bold text-slate-900">Thêm sinh viên</h2>
-                      <p className="text-sm text-slate-500">Môn học: {currentSubject.name}</p>
+                      <h2 className="text-2xl font-bold text-slate-900">
+                        Thêm sinh viên
+                      </h2>
+                      <p className="text-sm text-slate-500">
+                        Môn học: {currentSubject.name}
+                      </p>
                     </div>
                   </div>
                   <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-xl">
                     <p className="text-sm text-purple-800">
-                      <span className="font-semibold">Đã chọn:</span> {selectedStudentsForSubject.length} sinh viên
+                      <span className="font-semibold">Đã chọn:</span>{" "}
+                      {selectedStudentsForSubject.length} sinh viên
                     </p>
                   </div>
                   <div className="max-h-96 overflow-y-auto space-y-2 mb-6">
                     {availableStudents.length === 0 ? (
                       <div className="text-center py-12">
-                        <MdGroups className="mx-auto text-slate-300 mb-3" size={48} />
+                        <MdGroups
+                          className="mx-auto text-slate-300 mb-3"
+                          size={48}
+                        />
                         <p className="text-slate-500 font-medium">
                           Tất cả sinh viên đã được thêm vào môn học này
                         </p>
@@ -2068,8 +2429,12 @@ export default function AdminDashboard() {
                         >
                           <input
                             type="checkbox"
-                            checked={selectedStudentsForSubject.includes(stu._id)}
-                            onChange={() => toggleStudentSelectionForSubject(stu)}
+                            checked={selectedStudentsForSubject.includes(
+                              stu._id
+                            )}
+                            onChange={() =>
+                              toggleStudentSelectionForSubject(stu)
+                            }
                             className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
                           />
                           <div className="flex items-center gap-3 flex-1">
@@ -2077,7 +2442,9 @@ export default function AdminDashboard() {
                               {stu.name.charAt(0).toUpperCase()}
                             </div>
                             <div className="flex-1">
-                              <p className="font-semibold text-slate-900">{stu.name}</p>
+                              <p className="font-semibold text-slate-900">
+                                {stu.name}
+                              </p>
                               <p className="text-sm text-slate-600">
                                 {stu.student_id} • {stu.email}
                               </p>
@@ -2103,7 +2470,10 @@ export default function AdminDashboard() {
                           : "bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 hover:shadow-lg active:scale-95"
                       }`}
                     >
-                      Thêm {selectedStudentsForSubject.length > 0 && `(${selectedStudentsForSubject.length})`} sinh viên
+                      Thêm{" "}
+                      {selectedStudentsForSubject.length > 0 &&
+                        `(${selectedStudentsForSubject.length})`}{" "}
+                      sinh viên
                     </button>
                   </div>
                 </div>
@@ -2117,7 +2487,12 @@ export default function AdminDashboard() {
                   <button
                     onClick={() => {
                       setShowCreateExamModal(false);
-                      setExamForm({ name: "", code: "", start_time: "", duration: "" });
+                      setExamForm({
+                        name: "",
+                        code: "",
+                        start_time: "",
+                        duration: "",
+                      });
                       setExamSessions([{ start_time: "", duration: "" }]);
                     }}
                     className="absolute top-5 right-5 text-slate-400 hover:text-slate-600 transition-colors p-1 hover:bg-slate-100 rounded-lg"
@@ -2129,8 +2504,12 @@ export default function AdminDashboard() {
                       <FaRegCalendarAlt className="text-blue-600" size={24} />
                     </div>
                     <div>
-                      <h2 className="text-2xl font-bold text-slate-900">Tạo bài thi mới</h2>
-                      <p className="text-sm text-slate-500">Môn học: {currentSubject.name}</p>
+                      <h2 className="text-2xl font-bold text-slate-900">
+                        Tạo bài thi mới
+                      </h2>
+                      <p className="text-sm text-slate-500">
+                        Môn học: {currentSubject.name}
+                      </p>
                     </div>
                   </div>
                   <form onSubmit={handleCreateExam} className="space-y-6">
@@ -2142,7 +2521,9 @@ export default function AdminDashboard() {
                         <input
                           type="text"
                           value={examForm.name}
-                          onChange={(e) => setExamForm({ ...examForm, name: e.target.value })}
+                          onChange={(e) =>
+                            setExamForm({ ...examForm, name: e.target.value })
+                          }
                           placeholder="VD: Kiểm tra giữa kỳ"
                           className="w-full px-4 py-3 border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
                           required
@@ -2155,7 +2536,9 @@ export default function AdminDashboard() {
                         <input
                           type="text"
                           value={examForm.code}
-                          onChange={(e) => setExamForm({ ...examForm, code: e.target.value })}
+                          onChange={(e) =>
+                            setExamForm({ ...examForm, code: e.target.value })
+                          }
                           placeholder="VD: KT001"
                           className="w-full px-4 py-3 border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm font-mono"
                           required
@@ -2166,8 +2549,12 @@ export default function AdminDashboard() {
                     <div className="border-t border-slate-200 pt-6">
                       <div className="flex justify-between items-center mb-4">
                         <div>
-                          <h3 className="text-lg font-semibold text-slate-900 mb-1">Ca thi</h3>
-                          <p className="text-sm text-slate-500">Thêm các ca thi cho bài thi này</p>
+                          <h3 className="text-lg font-semibold text-slate-900 mb-1">
+                            Ca thi
+                          </h3>
+                          <p className="text-sm text-slate-500">
+                            Thêm các ca thi cho bài thi này
+                          </p>
                         </div>
                         <button
                           type="button"
@@ -2186,9 +2573,14 @@ export default function AdminDashboard() {
                             <div className="flex justify-between items-center mb-4">
                               <div className="flex items-center gap-2">
                                 <div className="p-2 bg-blue-100 rounded-lg">
-                                  <FaClock className="text-blue-600" size={16} />
+                                  <FaClock
+                                    className="text-blue-600"
+                                    size={16}
+                                  />
                                 </div>
-                                <h4 className="font-bold text-slate-900">Ca {idx + 1}</h4>
+                                <h4 className="font-bold text-slate-900">
+                                  Ca {idx + 1}
+                                </h4>
                               </div>
                               {examSessions.length > 1 && (
                                 <button
@@ -2196,7 +2588,8 @@ export default function AdminDashboard() {
                                   onClick={() => removeSessionRow(idx)}
                                   className="text-red-600 hover:text-red-700 text-sm font-medium px-3 py-1 hover:bg-red-50 rounded-lg transition-colors"
                                 >
-                                  <FiTrash2 className="inline mr-1" size={14} /> Xóa
+                                  <FiTrash2 className="inline mr-1" size={14} />{" "}
+                                  Xóa
                                 </button>
                               )}
                             </div>
@@ -2210,7 +2603,30 @@ export default function AdminDashboard() {
                                   min={new Date().toISOString().slice(0, 16)}
                                   className="w-full px-4 py-2.5 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
                                   value={ses.start_time}
-                                  onChange={(e) => updateSessionField(idx, "start_time", e.target.value)}
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    // Lấy thời gian hiện tại (định dạng giống datetime-local)
+                                    // Tạo thời gian hiện tại +7 giờ (bù lại UTC)
+                                    const now = new Date();
+                                    now.setHours(now.getHours() + 7);
+
+                                    // Chuẩn ISO rồi cắt giống datetime-local
+                                    const nowValue = now
+                                      .toISOString()
+                                      .slice(0, 16);
+
+                                    if (value < nowValue) {
+                                      toast.error(
+                                        "Không được chọn thời gian ở quá khứ"
+                                      );
+                                      return;
+                                    }
+                                    updateSessionField(
+                                      idx,
+                                      "start_time",
+                                      e.target.value
+                                    );
+                                  }}
                                 />
                               </div>
                               <div>
@@ -2223,7 +2639,13 @@ export default function AdminDashboard() {
                                   placeholder="Tối thiểu 15 phút"
                                   className="w-full px-4 py-2.5 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
                                   value={ses.duration}
-                                  onChange={(e) => updateSessionField(idx, "duration", e.target.value)}
+                                  onChange={(e) => {
+                                    updateSessionField(
+                                      idx,
+                                      "duration",
+                                      e.target.value
+                                    );
+                                  }}
                                 />
                               </div>
                             </div>
@@ -2237,7 +2659,12 @@ export default function AdminDashboard() {
                         type="button"
                         onClick={() => {
                           setShowCreateExamModal(false);
-                          setExamForm({ name: "", code: "", start_time: "", duration: "" });
+                          setExamForm({
+                            name: "",
+                            code: "",
+                            start_time: "",
+                            duration: "",
+                          });
                           setExamSessions([{ start_time: "", duration: "" }]);
                         }}
                         className="px-5 py-2.5 border border-slate-300 rounded-xl hover:bg-slate-50 font-medium text-slate-700 transition-all"
@@ -2271,7 +2698,9 @@ export default function AdminDashboard() {
                   >
                     <MdClose size={24} />
                   </button>
-                  <h2 className="text-xl font-semibold mb-4">Chi tiết bài thi: {currentExam.name}</h2>
+                  <h2 className="text-xl font-semibold mb-4">
+                    Chi tiết bài thi: {currentExam.name}
+                  </h2>
 
                   <div className="mb-4">
                     <h3 className="font-medium mb-2">Danh sách ca thi</h3>
@@ -2287,8 +2716,11 @@ export default function AdminDashboard() {
                                 <div>
                                   <p className="font-semibold">Ca: {s.name}</p>
                                   <p className="text-sm text-slate-600">
-                                    Bắt đầu: {new Date(new Date(s.start_time).getTime() + 7 * 60 * 60 * 1000).toLocaleString("vi-VN")}
-
+                                    Bắt đầu:{" "}
+                                    {new Date(
+                                      new Date(s.start_time).getTime() +
+                                        7 * 60 * 60 * 1000
+                                    ).toLocaleString("vi-VN")}
                                   </p>
                                   <p className="text-sm text-slate-500">
                                     Thời lượng: {s.duration} phút
@@ -2312,14 +2744,19 @@ export default function AdminDashboard() {
                                 <div className="flex flex-col gap-2">
                                   <button
                                     onClick={() =>
-                                      openAddStudentsToSession({ session: s, exam: currentExam })
+                                      openAddStudentsToSession({
+                                        session: s,
+                                        exam: currentExam,
+                                      })
                                     }
                                     className="flex  items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded text-sm"
                                   >
-                                  <FaUserPlus /> Thêm SV
+                                    <FaUserPlus /> Thêm SV
                                   </button>
                                   <button
-                                    onClick={() => handleViewStudentsInSession(s)}
+                                    onClick={() =>
+                                      handleViewStudentsInSession(s)
+                                    }
                                     className="flex  items-center gap-2 bg-emerald-500 text-white px-3 py-1 rounded text-sm"
                                   >
                                     <FaEye /> Xem SV
@@ -2370,9 +2807,25 @@ export default function AdminDashboard() {
                       type="datetime-local"
                       min={new Date().toISOString().slice(0, 16)}
                       value={newSessionForm.start_time}
-                      onChange={(e) =>
-                        setNewSessionForm({ ...newSessionForm, start_time: e.target.value })
-                      }
+                      onChange={(e) => {
+                        setNewSessionForm({
+                          ...newSessionForm,
+                          start_time: e.target.value,
+                        });
+                        const value = e.target.value;
+                        // Lấy thời gian hiện tại (định dạng giống datetime-local)
+                        // Tạo thời gian hiện tại +7 giờ (bù lại UTC)
+                        const now = new Date();
+                        now.setHours(now.getHours() + 7);
+
+                        // Chuẩn ISO rồi cắt giống datetime-local
+                        const nowValue = now.toISOString().slice(0, 16);
+
+                        if (value < nowValue) {
+                          toast.error("Không được chọn thời gian ở quá khứ");
+                          return;
+                        }
+                      }}
                       className="border px-3 py-2 rounded-lg w-full"
                     />
                     <input
@@ -2381,7 +2834,10 @@ export default function AdminDashboard() {
                       placeholder="Thời lượng (phút)"
                       value={newSessionForm.duration}
                       onChange={(e) =>
-                        setNewSessionForm({ ...newSessionForm, duration: e.target.value })
+                        setNewSessionForm({
+                          ...newSessionForm,
+                          duration: e.target.value,
+                        })
                       }
                       className="border px-3 py-2 rounded-lg w-full"
                     />
@@ -2417,9 +2873,12 @@ export default function AdminDashboard() {
                   >
                     <MdClose size={24} />
                   </button>
-                  <h2 className="text-xl font-semibold mb-4">Thêm sinh viên vào ca thi</h2>
+                  <h2 className="text-xl font-semibold mb-4">
+                    Thêm sinh viên vào ca thi
+                  </h2>
                   <p className="text-sm text-slate-600 mb-3">
-                    Ca: {new Date(targetSession.start_time).toLocaleString("vi-VN")}
+                    Ca:{" "}
+                    {new Date(targetSession.start_time).toLocaleString("vi-VN")}
                   </p>
                   <div className="max-h-96 overflow-y-auto space-y-2 mb-4">
                     {studentsNotInSession.length === 0 ? (
@@ -2437,8 +2896,12 @@ export default function AdminDashboard() {
                           </span>
                           <input
                             type="checkbox"
-                            checked={selectedStudentsForSession.includes(stu._id)}
-                            onChange={() => toggleStudentSelectionForSession(stu)}
+                            checked={selectedStudentsForSession.includes(
+                              stu._id
+                            )}
+                            onChange={() =>
+                              toggleStudentSelectionForSession(stu)
+                            }
                           />
                         </label>
                       ))
@@ -2472,9 +2935,13 @@ export default function AdminDashboard() {
                   >
                     <MdClose size={24} />
                   </button>
-                  <h2 className="text-xl font-semibold mb-4">Danh sách sinh viên trong ca thi</h2>
+                  <h2 className="text-xl font-semibold mb-4">
+                    Danh sách sinh viên trong ca thi
+                  </h2>
                   {studentsInSession.length === 0 ? (
-                    <p className="text-slate-500 text-center py-8">Chưa có sinh viên nào.</p>
+                    <p className="text-slate-500 text-center py-8">
+                      Chưa có sinh viên nào.
+                    </p>
                   ) : (
                     <div className="space-y-2">
                       {studentsInSession.map((stu) => (
@@ -2515,8 +2982,10 @@ export default function AdminDashboard() {
 
         return (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-slate-800">Thống kê tổng quan</h2>
-            
+            <h2 className="text-2xl font-bold text-slate-800">
+              Thống kê tổng quan
+            </h2>
+
             {/* Thống kê nhanh */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-blue-50 to-blue-100 p-5 shadow-sm">
@@ -2525,8 +2994,12 @@ export default function AdminDashboard() {
                     <p className="text-xs font-medium uppercase tracking-wide text-blue-600">
                       Tổng tài khoản
                     </p>
-                    <p className="mt-2 text-3xl font-bold text-blue-900">{totalAccounts}</p>
-                    <p className="mt-1 text-xs text-blue-700">Giảng viên & Sinh viên</p>
+                    <p className="mt-2 text-3xl font-bold text-blue-900">
+                      {totalAccounts}
+                    </p>
+                    <p className="mt-1 text-xs text-blue-700">
+                      Giảng viên & Sinh viên
+                    </p>
                   </div>
                   <FiUsers className="text-blue-500" size={32} />
                 </div>
@@ -2537,8 +3010,12 @@ export default function AdminDashboard() {
                     <p className="text-xs font-medium uppercase tracking-wide text-emerald-600">
                       Tổng môn học
                     </p>
-                    <p className="mt-2 text-3xl font-bold text-emerald-900">{totalSubjectsStats}</p>
-                    <p className="mt-1 text-xs text-emerald-700">Môn học đang quản lý</p>
+                    <p className="mt-2 text-3xl font-bold text-emerald-900">
+                      {totalSubjectsStats}
+                    </p>
+                    <p className="mt-1 text-xs text-emerald-700">
+                      Môn học đang quản lý
+                    </p>
                   </div>
                   <FiBook className="text-emerald-500" size={32} />
                 </div>
@@ -2549,8 +3026,12 @@ export default function AdminDashboard() {
                     <p className="text-xs font-medium uppercase tracking-wide text-purple-600">
                       Tổng kỳ thi
                     </p>
-                    <p className="mt-2 text-3xl font-bold text-purple-900">{totalExams}</p>
-                    <p className="mt-1 text-xs text-purple-700">Kỳ thi đã tạo</p>
+                    <p className="mt-2 text-3xl font-bold text-purple-900">
+                      {totalExams}
+                    </p>
+                    <p className="mt-1 text-xs text-purple-700">
+                      Kỳ thi đã tạo
+                    </p>
                   </div>
                   <MdAssignment className="text-purple-500" size={32} />
                 </div>
@@ -2561,7 +3042,9 @@ export default function AdminDashboard() {
                     <p className="text-xs font-medium uppercase tracking-wide text-amber-600">
                       Tổng ca thi
                     </p>
-                    <p className="mt-2 text-3xl font-bold text-amber-900">{totalSessions}</p>
+                    <p className="mt-2 text-3xl font-bold text-amber-900">
+                      {totalSessions}
+                    </p>
                     <p className="mt-1 text-xs text-amber-700">Ca thi đã tạo</p>
                   </div>
                   <FaRegCalendarAlt className="text-amber-500" size={32} />
@@ -2583,7 +3066,9 @@ export default function AdminDashboard() {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      label={({ name, percent }) =>
+                        `${name}: ${(percent * 100).toFixed(0)}%`
+                      }
                       outerRadius={100}
                       fill="#8884d8"
                       dataKey="value"
@@ -2633,8 +3118,8 @@ export default function AdminDashboard() {
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={topSubjectsData}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="name" 
+                    <XAxis
+                      dataKey="name"
                       angle={-45}
                       textAnchor="end"
                       height={80}
@@ -2642,7 +3127,11 @@ export default function AdminDashboard() {
                     />
                     <YAxis />
                     <Tooltip />
-                    <Bar dataKey="students" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+                    <Bar
+                      dataKey="students"
+                      fill="#3b82f6"
+                      radius={[8, 8, 0, 0]}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -2655,8 +3144,8 @@ export default function AdminDashboard() {
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={subjectsByTeacherData}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="name" 
+                    <XAxis
+                      dataKey="name"
                       angle={-45}
                       textAnchor="end"
                       height={80}
@@ -2677,9 +3166,23 @@ export default function AdminDashboard() {
                 <ResponsiveContainer width="100%" height={300}>
                   <AreaChart data={examsOverTimeData}>
                     <defs>
-                      <linearGradient id="colorExams" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8} />
-                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                      <linearGradient
+                        id="colorExams"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop
+                          offset="5%"
+                          stopColor="#8b5cf6"
+                          stopOpacity={0.8}
+                        />
+                        <stop
+                          offset="95%"
+                          stopColor="#8b5cf6"
+                          stopOpacity={0}
+                        />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -2704,11 +3207,15 @@ export default function AdminDashboard() {
       case "reports": {
         return (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-slate-800">Báo cáo tổng hợp</h2>
-            
+            <h2 className="text-2xl font-bold text-slate-800">
+              Báo cáo tổng hợp
+            </h2>
+
             {/* Form filter */}
             <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-slate-800 mb-4">Bộ lọc</h3>
+              <h3 className="text-lg font-semibold text-slate-800 mb-4">
+                Bộ lọc
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -2718,7 +3225,10 @@ export default function AdminDashboard() {
                     type="date"
                     value={reportFilters.start_date}
                     onChange={(e) =>
-                      setReportFilters({ ...reportFilters, start_date: e.target.value })
+                      setReportFilters({
+                        ...reportFilters,
+                        start_date: e.target.value,
+                      })
                     }
                     className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm shadow-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                   />
@@ -2731,7 +3241,10 @@ export default function AdminDashboard() {
                     type="date"
                     value={reportFilters.end_date}
                     onChange={(e) =>
-                      setReportFilters({ ...reportFilters, end_date: e.target.value })
+                      setReportFilters({
+                        ...reportFilters,
+                        end_date: e.target.value,
+                      })
                     }
                     className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm shadow-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                   />
@@ -2743,7 +3256,10 @@ export default function AdminDashboard() {
                   <select
                     value={reportFilters.class_id}
                     onChange={(e) =>
-                      setReportFilters({ ...reportFilters, class_id: e.target.value })
+                      setReportFilters({
+                        ...reportFilters,
+                        class_id: e.target.value,
+                      })
                     }
                     className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm shadow-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                   >
@@ -2841,12 +3357,11 @@ export default function AdminDashboard() {
                           fill="#8884d8"
                           dataKey="value"
                         >
-                          {[
-                            { color: "#f59e0b" },
-                            { color: "#8b5cf6" },
-                          ].map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
+                          {[{ color: "#f59e0b" }, { color: "#8b5cf6" }].map(
+                            (entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            )
+                          )}
                         </Pie>
                         <Tooltip />
                         <Legend />
@@ -2861,12 +3376,17 @@ export default function AdminDashboard() {
                     </h3>
                     <ResponsiveContainer width="100%" height={300}>
                       <BarChart
-                        data={Object.entries(reportData.class_statistics).map(([name, stats]) => ({
-                          name: name.length > 15 ? name.substring(0, 15) + "..." : name,
-                          "Tổng vi phạm": stats.total,
-                          "Vi phạm hành vi": stats.behavior,
-                          "Vi phạm nhận diện": stats.face,
-                        }))}
+                        data={Object.entries(reportData.class_statistics).map(
+                          ([name, stats]) => ({
+                            name:
+                              name.length > 15
+                                ? name.substring(0, 15) + "..."
+                                : name,
+                            "Tổng vi phạm": stats.total,
+                            "Vi phạm hành vi": stats.behavior,
+                            "Vi phạm nhận diện": stats.face,
+                          })
+                        )}
                       >
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis
@@ -2879,9 +3399,21 @@ export default function AdminDashboard() {
                         <YAxis />
                         <Tooltip />
                         <Legend />
-                        <Bar dataKey="Tổng vi phạm" fill="#ef4444" radius={[8, 8, 0, 0]} />
-                        <Bar dataKey="Vi phạm hành vi" fill="#f59e0b" radius={[8, 8, 0, 0]} />
-                        <Bar dataKey="Vi phạm nhận diện" fill="#8b5cf6" radius={[8, 8, 0, 0]} />
+                        <Bar
+                          dataKey="Tổng vi phạm"
+                          fill="#ef4444"
+                          radius={[8, 8, 0, 0]}
+                        />
+                        <Bar
+                          dataKey="Vi phạm hành vi"
+                          fill="#f59e0b"
+                          radius={[8, 8, 0, 0]}
+                        />
+                        <Bar
+                          dataKey="Vi phạm nhận diện"
+                          fill="#8b5cf6"
+                          radius={[8, 8, 0, 0]}
+                        />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -2898,36 +3430,67 @@ export default function AdminDashboard() {
                     <table className="min-w-full text-left text-sm">
                       <thead className="bg-slate-50">
                         <tr>
-                          <th className="px-4 py-3 font-semibold text-slate-700">STT</th>
-                          <th className="px-4 py-3 font-semibold text-slate-700">Thời gian</th>
-                          <th className="px-4 py-3 font-semibold text-slate-700">Sinh viên</th>
-                          <th className="px-4 py-3 font-semibold text-slate-700">Mã SV</th>
-                          <th className="px-4 py-3 font-semibold text-slate-700">Môn học</th>
-                          <th className="px-4 py-3 font-semibold text-slate-700">Kỳ thi</th>
-                          <th className="px-4 py-3 font-semibold text-slate-700">Loại</th>
-                          <th className="px-4 py-3 font-semibold text-slate-700">Hành vi</th>
+                          <th className="px-4 py-3 font-semibold text-slate-700">
+                            STT
+                          </th>
+                          <th className="px-4 py-3 font-semibold text-slate-700">
+                            Thời gian
+                          </th>
+                          {/* <th className="px-4 py-3 font-semibold text-slate-700">
+                            Sinh viên
+                          </th> */}
+                          <th className="px-4 py-3 font-semibold text-slate-700">
+                            Mã SV
+                          </th>
+                          <th className="px-4 py-3 font-semibold text-slate-700">
+                            Môn học
+                          </th>
+                          <th className="px-4 py-3 font-semibold text-slate-700">
+                            Kỳ thi
+                          </th>
+                          <th className="px-4 py-3 font-semibold text-slate-700">
+                            Loại
+                          </th>
+                          <th className="px-4 py-3 font-semibold text-slate-700">
+                            Hành vi
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {reportData.violations.length === 0 ? (
                           <tr>
-                            <td colSpan="8" className="px-4 py-8 text-center text-slate-500">
+                            <td
+                              colSpan="8"
+                              className="px-4 py-8 text-center text-slate-500"
+                            >
                               Không có dữ liệu vi phạm
                             </td>
                           </tr>
                         ) : (
                           reportData.violations.map((v, index) => (
                             <tr key={index} className="hover:bg-slate-50">
-                              <td className="px-4 py-3 text-slate-600">{index + 1}</td>
+                              <td className="px-4 py-3 text-slate-600">
+                                {index + 1}
+                              </td>
                               <td className="px-4 py-3 text-slate-600">
                                 {v.timestamp
-                                  ? new Date(v.timestamp).toLocaleString("vi-VN")
+                                  ? new Date(v.timestamp).toLocaleString(
+                                      "vi-VN"
+                                    )
                                   : "N/A"}
                               </td>
-                              <td className="px-4 py-3 text-slate-600">{v.student_name || "N/A"}</td>
-                              <td className="px-4 py-3 text-slate-600">{v.student_id || "N/A"}</td>
-                              <td className="px-4 py-3 text-slate-600">{v.class_name || "N/A"}</td>
-                              <td className="px-4 py-3 text-slate-600">{v.exam_name || "N/A"}</td>
+                              {/* <td className="px-4 py-3 text-slate-600">
+                                {v.student_name || "N/A"}
+                              </td> */}
+                              <td className="px-4 py-3 text-slate-600">
+                                {v.student || "N/A"}
+                              </td>
+                              <td className="px-4 py-3 text-slate-600">
+                                {v.class_name || "N/A"}
+                              </td>
+                              <td className="px-4 py-3 text-slate-600">
+                                {v.exam_name || "N/A"}
+                              </td>
                               <td className="px-4 py-3">
                                 <span
                                   className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
@@ -2946,7 +3509,8 @@ export default function AdminDashboard() {
                                 </span>
                               </td>
                               <td className="px-4 py-3 text-slate-600">
-                                {v.behavior_display || getBehaviorName(v.behavior, v.type)}
+                                {v.behavior_display ||
+                                  getBehaviorName(v.behavior, v.type)}
                               </td>
                             </tr>
                           ))
@@ -3038,7 +3602,9 @@ export default function AdminDashboard() {
                 className="h-10 w-10 rounded-full ring-2 ring-indigo-200"
               />
               <div className="flex-1">
-                <p className="text-sm font-semibold text-slate-900">Quản trị viên</p>
+                <p className="text-sm font-semibold text-slate-900">
+                  Quản trị viên
+                </p>
                 <p className="text-xs text-slate-500">Administrator</p>
               </div>
             </div>
@@ -3053,13 +3619,13 @@ export default function AdminDashboard() {
           {/* Sticky Header */}
           <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur-sm shadow-sm">
             <div className="flex items-center justify-between px-6 py-4">
-              <div className="flex-1">
-                
-              </div>
+              <div className="flex-1"></div>
               <div className="flex items-center gap-4">
                 <div className="hidden items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-2 shadow-sm sm:flex">
                   <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                  <span className="text-sm font-medium text-slate-700">Trực tuyến</span>
+                  <span className="text-sm font-medium text-slate-700">
+                    Trực tuyến
+                  </span>
                 </div>
                 <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-sm">
                   <img
@@ -3098,5 +3664,3 @@ export default function AdminDashboard() {
     </div>
   );
 }
-
-

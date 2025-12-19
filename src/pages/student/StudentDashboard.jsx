@@ -82,6 +82,7 @@ export default function StudentDashboard() {
   };
 
   const handleEnterExam = (session) => {
+    console.log(session)
     // Kiểm tra trạng thái đăng ký danh tính trước khi vào thi
     if (!userInfo.face_registered || !userInfo.face_image) {
       toast.error("Chưa hoàn thành quá trình đăng ký danh tính. Vui lòng đăng ký trước.", {
