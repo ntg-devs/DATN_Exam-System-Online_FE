@@ -135,7 +135,7 @@ export default function AdminDashboard() {
     []
   );
 
-  // Tạo bài thi
+  // Tạo lịch thi
   const [showCreateExamModal, setShowCreateExamModal] = useState(false);
   const [examForm, setExamForm] = useState({
     name: "",
@@ -147,7 +147,7 @@ export default function AdminDashboard() {
     { start_time: "", duration: "" },
   ]);
 
-  // Chi tiết bài thi
+  // Chi tiết lịch thi
   const [showExamDetailModal, setShowExamDetailModal] = useState(false);
   const [currentExam, setCurrentExam] = useState(null);
   const [examSessionsList, setExamSessionsList] = useState([]);
@@ -479,7 +479,7 @@ export default function AdminDashboard() {
       });
       setStudentsInSubject(studentsRes?.students || []);
 
-      // Load bài thi của môn học
+      // Load lịch thi của môn học
       const examsRes = await getExamsByClass({ class_id: currentSubject._id });
       setExamsInSubject(examsRes?.exams || []);
     } catch (error) {
@@ -567,7 +567,7 @@ export default function AdminDashboard() {
   const handleCreateExam = async (e) => {
     e.preventDefault();
     if (!examForm.name || !examForm.code) {
-      toast.error("Vui lòng nhập tên và mã bài thi!");
+      toast.error("Vui lòng nhập tên và mã lịch thi!");
       return;
     }
 
@@ -581,7 +581,7 @@ export default function AdminDashboard() {
 
     setLoading(true);
     try {
-      // Tạo bài thi
+      // Tạo lịch thi
       const examRes = await createExam({
         class_id: currentSubject._id,
         name: examForm.name,
@@ -593,7 +593,7 @@ export default function AdminDashboard() {
       });
 
       if (!examRes.success) {
-        toast.error("Không tạo được bài thi!");
+        toast.error("Không tạo được lịch thi!");
         return;
       }
 
@@ -613,14 +613,14 @@ export default function AdminDashboard() {
         }
       }
 
-      toast.success("Tạo bài thi và ca thi thành công!");
+      toast.success("Tạo lịch thi và ca thi thành công!");
       setShowCreateExamModal(false);
       setExamForm({ name: "", code: "", start_time: "", duration: "" });
       setExamSessions([{ start_time: "", duration: "" }]);
       await loadSubjectData();
     } catch (error) {
       console.error(error);
-      toast.error("Lỗi khi tạo bài thi!");
+      toast.error("Lỗi khi tạo lịch thi!");
     } finally {
       setLoading(false);
     }
@@ -2042,7 +2042,7 @@ export default function AdminDashboard() {
                         }`}
                       >
                         <FaRegCalendarAlt className="inline mr-2" size={14} />
-                        Bài thi
+                        Lịch thi
                         {subjectPanelMode === "exams" && (
                           <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600 rounded-t-full"></span>
                         )}
@@ -2147,14 +2147,14 @@ export default function AdminDashboard() {
                                 size={20}
                               />
                               <p className="text-sm font-semibold text-slate-700">
-                                {examsInSubject.length} bài thi
+                                {examsInSubject.length} lịch thi
                               </p>
                             </div>
                             <button
                               onClick={() => setShowCreateExamModal(true)}
                               className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-md transition-all hover:shadow-lg active:scale-95"
                             >
-                              <FaPlus size={14} /> Tạo bài thi
+                              <FaPlus size={14} /> Tạo lịch thi
                             </button>
                           </div>
                           {examsInSubject.length === 0 ? (
@@ -2166,16 +2166,16 @@ export default function AdminDashboard() {
                                 />
                               </div>
                               <p className="text-slate-500 font-medium mb-1">
-                                Chưa có bài thi nào
+                                Chưa có lịch thi nào
                               </p>
                               <p className="text-sm text-slate-400 mb-4">
-                                Tạo bài thi đầu tiên cho môn học này
+                                Tạo lịch thi đầu tiên cho môn học này
                               </p>
                               <button
                                 onClick={() => setShowCreateExamModal(true)}
                                 className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-all hover:shadow"
                               >
-                                <FaPlus /> Tạo bài thi
+                                <FaPlus /> Tạo lịch thi
                               </button>
                             </div>
                           ) : (
@@ -2480,7 +2480,7 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* Modal tạo bài thi */}
+            {/* Modal tạo lịch thi */}
             {showCreateExamModal && currentSubject && (
               <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 overflow-auto p-4">
                 <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-3xl relative max-h-[90vh] overflow-y-auto">
@@ -2505,7 +2505,7 @@ export default function AdminDashboard() {
                     </div>
                     <div>
                       <h2 className="text-2xl font-bold text-slate-900">
-                        Tạo bài thi mới
+                        Tạo lịch thi mới
                       </h2>
                       <p className="text-sm text-slate-500">
                         Môn học: {currentSubject.name}
@@ -2516,7 +2516,7 @@ export default function AdminDashboard() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                       <div>
                         <label className="block text-sm font-semibold mb-2 text-slate-700">
-                          Tên bài thi <span className="text-red-500">*</span>
+                          Tên lịch thi <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
@@ -2531,7 +2531,7 @@ export default function AdminDashboard() {
                       </div>
                       <div>
                         <label className="block text-sm font-semibold mb-2 text-slate-700">
-                          Mã bài thi <span className="text-red-500">*</span>
+                          Mã lịch thi <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
@@ -2553,7 +2553,7 @@ export default function AdminDashboard() {
                             Ca thi
                           </h3>
                           <p className="text-sm text-slate-500">
-                            Thêm các ca thi cho bài thi này
+                            Thêm các ca thi cho lịch thi này
                           </p>
                         </div>
                         <button
@@ -2680,7 +2680,7 @@ export default function AdminDashboard() {
                             : "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 hover:shadow-lg active:scale-95"
                         }`}
                       >
-                        {loading ? "Đang tạo..." : "Tạo bài thi"}
+                        {loading ? "Đang tạo..." : "Tạo lịch thi"}
                       </button>
                     </div>
                   </form>
@@ -2688,7 +2688,7 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* Modal chi tiết bài thi */}
+            {/* Modal chi tiết lịch thi */}
             {showExamDetailModal && currentExam && (
               <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-auto">
                 <div className="bg-white rounded-xl p-6 w-full max-w-3xl relative max-h-[90vh] overflow-y-auto">
@@ -2699,7 +2699,7 @@ export default function AdminDashboard() {
                     <MdClose size={24} />
                   </button>
                   <h2 className="text-xl font-semibold mb-4">
-                    Chi tiết bài thi: {currentExam.name}
+                    Chi tiết lịch thi: {currentExam.name}
                   </h2>
 
                   <div className="mb-4">
