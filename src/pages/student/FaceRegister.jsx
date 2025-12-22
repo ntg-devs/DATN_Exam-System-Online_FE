@@ -241,7 +241,7 @@ function FaceRegister() {
             ws.close();
           } else if (data.type === "face_register_pending") {
             // Đang xử lý
-            setStatus("Quá trình đăng ký khuôn mặt đăng được xử lý vui lòng đợi trong chốc lát...");
+            setStatus("Quá trình đăng ký khuôn mặt đang được xử lý vui lòng đợi trong chốc lát...");
           }
         };
 
