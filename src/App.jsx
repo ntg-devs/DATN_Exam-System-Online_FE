@@ -23,6 +23,28 @@ import TeacherViolationHistory from "./pages/teacher/TeacherViolationHistory";
 
 import AdminDashboard from "./pages/admin/AdminDashboard";
 
+// ✅ Component redirect khi route không tồn tại
+function NotFoundRedirect() {
+  const userInfo = useSelector((state) => state.user.userInfo);
+
+  // Nếu chưa đăng nhập → về login
+  if (!userInfo) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Nếu đã đăng nhập → redirect về dashboard theo role
+  let redirectPath = "/login";
+  if (userInfo.role === "admin") {
+    redirectPath = "/admin";
+  } else if (userInfo.role === "teacher") {
+    redirectPath = "/class_dashboard";
+  } else if (userInfo.role === "student") {
+    redirectPath = "/student_dashboard";
+  }
+
+  return <Navigate to={redirectPath} replace />;
+}
+
 // ✅ Component bảo vệ route theo role
 function ProtectedRoute({ element, allowedRole, requireFaceRegister = false }) {
   const userInfo = useSelector((state) => state.user.userInfo);
@@ -33,9 +55,15 @@ function ProtectedRoute({ element, allowedRole, requireFaceRegister = false }) {
   }
 
   if (userInfo.role !== allowedRole) {
-    // Nếu role không khớp → chuyển hướng đúng dashboard của role hiện tại
-    const redirectPath =
-      userInfo.role === "teacher" ? "/class_dashboard" : "/student_dashboard";
+    // Xử lý đầy đủ cho tất cả roles
+    let redirectPath = "/login";
+    if (userInfo.role === "admin") {
+      redirectPath = "/admin";
+    } else if (userInfo.role === "teacher") {
+      redirectPath = "/class_dashboard";
+    } else if (userInfo.role === "student") {
+      redirectPath = "/student_dashboard";
+    }
     return <Navigate to={redirectPath} replace />;
   }
 
@@ -156,8 +184,8 @@ function App() {
             }
           />
 
-          {/* Nếu không khớp route nào → quay về trang chủ */}
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          {/* Nếu không khớp route nào → redirect theo role hoặc về login */}
+          <Route path="*" element={<NotFoundRedirect />} />
         </Routes>
       </div>
     </Router>
