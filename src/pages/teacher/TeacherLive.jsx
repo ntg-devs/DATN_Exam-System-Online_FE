@@ -1,4 +1,4 @@
-import { useSearchParams, Link } from "react-router-dom";
+import { useSearchParams, Link, useNavigate } from "react-router-dom";
 import {
   LogOut,
   GraduationCap,
@@ -11,10 +11,11 @@ import {
   Users,
 } from "lucide-react";
 import { FaCamera } from "react-icons/fa";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { getStudentsInSession } from "../../services/services";
 import { useEffect, useState } from "react";
 import { SOCKET_URL } from "../../utils/path";
+import { logout } from "../../redux/slices/userSlice.js";
 
 // Lightbox component đơn giản (không cần thư viện)
 const Lightbox = ({ src, onClose }) => (
@@ -58,6 +59,18 @@ export default function TeacherLive() {
   const verifyInfo = useSelector((state) => state.verify.verifyInfo);
 
   const userInfo = useSelector((state) => state.user.userInfo);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    // Xóa Redux state
+    dispatch(logout());
+    // Xóa localStorage
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("user");
+    // Chuyển đến trang đăng nhập
+    navigate("/login");
+  };
 
   const behaviorMap = {
     hand_move: "Di chuyển tay bất thường",
@@ -237,7 +250,10 @@ export default function TeacherLive() {
                     </div>
                   )}
                 </div>
-                <button className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-full shadow transition">
+                <button 
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-full shadow transition"
+                >
                   <LogOut size={18} />
                   Đăng xuất
                 </button>

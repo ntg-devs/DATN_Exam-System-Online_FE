@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { getStudentViolations } from "../../services/services.js";
 import { FiSearch } from "react-icons/fi";
 import { FaBook, FaExclamationTriangle, FaClock } from "react-icons/fa";
@@ -7,6 +7,7 @@ import { GraduationCap, LogOut } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import NotificationBell from "../../components/NotificationBell";
 import toast, { Toaster } from "react-hot-toast";
+import { logout } from "../../redux/slices/userSlice.js";
 
 export default function StudentViolationHistory() {
   const [violations, setViolations] = useState([]);
@@ -24,7 +25,18 @@ export default function StudentViolationHistory() {
   const [showTeacherInfo, setShowTeacherInfo] = useState(false);
 
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const userInfo = useSelector((state) => state.user.userInfo);
+
+  const handleLogout = () => {
+    // Xóa Redux state
+    dispatch(logout());
+    // Xóa localStorage
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("user");
+    // Chuyển đến trang đăng nhập
+    navigate("/login");
+  };
 
   const behaviorMap = {
     hand_move: "Cử động tay bất thường",
@@ -290,9 +302,7 @@ export default function StudentViolationHistory() {
               )}
             </div>
             <button
-              onClick={() => {
-                navigate("/");
-              }}
+              onClick={handleLogout}
               className="px-3 py-2 bg-red-500 text-white rounded-xl flex items-center gap-2 hover:bg-red-600 shadow"
             >
               <LogOut size={18} /> Đăng xuất

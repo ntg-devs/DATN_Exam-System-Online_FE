@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { useSearchParams, Link, useNavigate } from "react-router-dom";
 import { LogOut, GraduationCap } from "lucide-react";
 import NotificationBell from "../../components/NotificationBell";
 import toast, { Toaster } from "react-hot-toast";
 import { changePassword } from "../../services/services.js";
+import { logout } from "../../redux/slices/userSlice.js";
 
 import { SOCKET_URL } from "../../utils/path";
 
@@ -37,6 +38,7 @@ export default function StudentLive({ fps = 4 }) {
   const { userInfo } = useSelector((state) => state.user);
   const verifyInfo = useSelector((state) => state.verify.verifyInfo);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const handleChangePassword = async () => {
     if (!passwordForm.current_password || !passwordForm.new_password || !passwordForm.confirm_password) {
@@ -225,6 +227,20 @@ export default function StudentLive({ fps = 4 }) {
    * Đăng xuất
    * ========================== */
   const handleLogout = () => {
+    // Xóa Redux state
+    dispatch(logout());
+    // Xóa localStorage
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("user");
+    // Đóng WebSocket nếu đang mở
+    if (wsRef.current) {
+      wsRef.current.close();
+    }
+    // Dừng camera
+    if (videoRef.current?.srcObject) {
+      videoRef.current.srcObject.getTracks().forEach((t) => t.stop());
+    }
+    // Chuyển đến trang đăng nhập
     navigate("/login");
   };
 
@@ -426,9 +442,7 @@ export default function StudentLive({ fps = 4 }) {
                 </div>
             <NotificationBell studentId={userInfo._id} toast={toast} />
             <button
-              onClick={() => {
-                navigate("/");
-              }}
+              onClick={handleLogout}
               className="px-3 py-2 bg-red-500 text-white rounded-xl flex items-center gap-2 hover:bg-red-600 shadow"
             >
               <LogOut size={18} /> Đăng xuất

@@ -10,7 +10,7 @@ import { pushNotification } from "../../redux/slices/notificationSlice";
 import { useDispatch } from "react-redux";
 import NotificationBell from "../../components/NotificationBell";
 import { SOCKET_URL } from "../../utils/path";
-import { login } from "../../redux/slices/userSlice.js";
+import { login, logout } from "../../redux/slices/userSlice.js";
 import { setVerifyInfo } from "../../redux/slices/verifySlice.js";
 
 export default function StudentDashboard() {
@@ -178,6 +178,16 @@ export default function StudentDashboard() {
     } finally {
       setChangingPassword(false);
     }
+  };
+
+  const handleLogout = () => {
+    // Xóa Redux state
+    dispatch(logout());
+    // Xóa localStorage
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("user");
+    // Chuyển đến trang đăng nhập
+    navigate("/login");
   };
 
   const renderClassCard = (cls) => {
@@ -511,9 +521,7 @@ export default function StudentDashboard() {
                 </div>
             <NotificationBell studentId={userInfo._id} toast={toast} />
             <button
-              onClick={() => {
-                navigate("/");
-              }}
+              onClick={handleLogout}
               className="px-3 py-2 bg-red-500 text-white rounded-xl flex items-center gap-2 hover:bg-red-600 shadow"
             >
               <LogOut size={18} /> Đăng xuất

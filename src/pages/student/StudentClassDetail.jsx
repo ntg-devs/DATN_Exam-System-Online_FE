@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { getClassById, checkFaceRegistrationStatus } from "../../services/services.js";
 import { setVerifyInfo } from "../../redux/slices/verifySlice";
+import { logout } from "../../redux/slices/userSlice.js";
 import { motion } from "framer-motion";
 import { LogOut, CalendarDays, GraduationCap } from "lucide-react";
 import { FaUserGraduate, FaChalkboardTeacher, FaUsers } from "react-icons/fa";
@@ -125,7 +126,19 @@ export default function StudentClassDetail() {
     // chỉ phụ thuộc vào studentId và id (không include cls)
   }, [studentId, id]);
 
-  const logout = () => navigate("/login");
+  const handleLogout = () => {
+    // Xóa Redux state
+    dispatch(logout());
+    // Xóa localStorage
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("user");
+    // Đóng WebSocket nếu đang mở
+    if (wsRef.current) {
+      wsRef.current.close();
+    }
+    // Chuyển đến trang đăng nhập
+    navigate("/login");
+  };
 
   // =============================
   //  UTILS: kiểm tra trạng thái ca / bài thi
@@ -221,9 +234,7 @@ export default function StudentClassDetail() {
             </Link>
             <NotificationBell studentId={userInfo._id} toast={toast} />
             <button
-              onClick={() => {
-                navigate("/");
-              }}
+              onClick={handleLogout}
               className="px-3 py-2 bg-red-500 text-white rounded-xl flex items-center gap-2 hover:bg-red-600 shadow"
             >
               <LogOut size={18} /> Đăng xuất

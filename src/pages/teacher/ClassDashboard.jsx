@@ -23,6 +23,7 @@ import {
 
 import { useDispatch } from "react-redux";
 import { setVerifyInfo } from "../../redux/slices/verifySlice.js";
+import { logout } from "../../redux/slices/userSlice.js";
 import NotificationBell from "../../components/NotificationBell";
 import { SOCKET_URL } from "../../utils/path";
 
@@ -108,6 +109,16 @@ export default function ClassDashboard() {
     } finally {
       setChangingPassword(false);
     }
+  };
+
+  const handleLogout = () => {
+    // Xóa Redux state
+    dispatch(logout());
+    // Xóa localStorage
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("user");
+    // Chuyển đến trang đăng nhập
+    navigate("/login");
   };
 
   useEffect(() => {
@@ -506,9 +517,7 @@ export default function ClassDashboard() {
               )}
             </div>
             <button
-              onClick={() => {
-                navigate("/");
-              }}
+              onClick={handleLogout}
               className="px-3 py-2 bg-red-500 text-white rounded-xl flex items-center gap-2 hover:bg-red-600 shadow"
             >
               <LogOut size={18} /> Đăng xuất

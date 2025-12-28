@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import { MdCheckCircle } from "react-icons/md";
 import { useDispatch, useSelector } from "react-redux";
-import { login } from "../../redux/slices/userSlice.js";
+import { login, logout } from "../../redux/slices/userSlice.js";
 import {
   setVerifyInfo,
   verifySuccess,
@@ -219,8 +219,15 @@ export default function FaceVerify() {
     }
   };
 
-  const logout = () => {
+  const handleLogout = () => {
+    // Dừng camera
     stopCamera();
+    // Xóa Redux state
+    dispatch(logout());
+    // Xóa localStorage
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("user");
+    // Chuyển đến trang đăng nhập
     navigate("/login");
   };
 
@@ -237,7 +244,7 @@ export default function FaceVerify() {
           </Link>
 
           <button
-            onClick={logout}
+            onClick={handleLogout}
             className="px-3 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 shadow"
           >
             <LogOut size={18} /> Đăng xuất
