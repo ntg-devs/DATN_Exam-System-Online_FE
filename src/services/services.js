@@ -12,9 +12,9 @@ async function apiCall(endpoint, options = {}) {
   };
   
   // Thêm header để bypass ngrok browser warning (nếu dùng ngrok)
-  if (API_URL.includes("ngrok")) {
-    headers["ngrok-skip-browser-warning"] = "true";
-  }
+  // if (API_URL.includes("ngrok")) {
+  //   headers["ngrok-skip-browser-warning"] = "true";
+  // }
   
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
