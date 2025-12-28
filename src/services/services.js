@@ -2,6 +2,20 @@ import { URL_API } from "../utils/path";
 
 const API_URL = `${URL_API}/`;
 
+// Helper function để tạo headers với ngrok bypass
+function createHeaders(customHeaders = {}) {
+  const baseHeaders = {
+    "Content-Type": "application/json",
+  };
+  
+  // Thêm ngrok header nếu dùng ngrok
+  if (API_URL.includes("ngrok")) {
+    baseHeaders["ngrok-skip-browser-warning"] = "true";
+  }
+  
+  return { ...baseHeaders, ...customHeaders };
+}
+
 // Helper function để gọi API với token tự động
 async function apiCall(endpoint, options = {}) {
   const token = localStorage.getItem("access_token");
@@ -12,9 +26,9 @@ async function apiCall(endpoint, options = {}) {
   };
   
   // Thêm header để bypass ngrok browser warning (nếu dùng ngrok)
-  // if (API_URL.includes("ngrok")) {
-  //   headers["ngrok-skip-browser-warning"] = "true";
-  // }
+  if (API_URL.includes("ngrok")) {
+    headers["ngrok-skip-browser-warning"] = "true";
+  }
   
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
@@ -79,9 +93,7 @@ export async function getExamsByTeacher(payload) {
   try {
     const res = await fetch(API_URL + "exams_by_teacher", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: createHeaders(),
       body: JSON.stringify(payload),
     });
     const data = await res.json();
@@ -123,7 +135,7 @@ export async function createAccount(payload) {
   try {
     const res = await fetch(API_URL + "create-user", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: createHeaders(),
       body: JSON.stringify(payload),
     });
 
@@ -163,7 +175,7 @@ export async function getAllUsers(payload = {}) {
   try {
     const res = await fetch(API_URL + "get-users", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: createHeaders(),
       body: JSON.stringify(payload),
     });
 
@@ -240,7 +252,7 @@ export async function getAccountByFace(payload) {
   try {
     const res = await fetch(API_URL + "login_face", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: createHeaders(),
       body: JSON.stringify(payload),
     });
 
@@ -262,7 +274,7 @@ export const teacherLogin = async (payload) => {
   try {
     const res = await fetch(`${URL_API}/login`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: createHeaders(),
       body: JSON.stringify(payload),
     });
 
@@ -296,7 +308,7 @@ export async function getClasses(payload) {
     console.log(payload)
     const res = await fetch(API_URL + "get-classes", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: createHeaders(),
       body: JSON.stringify(payload),
     });
 
@@ -325,7 +337,7 @@ export async function createClass(payload) {
   try {
     const res = await fetch(API_URL + "create-class", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: createHeaders(),
       body: JSON.stringify(payload), // payload chứa code
     });
 
@@ -355,7 +367,7 @@ export async function getExamsByClass(payload) {
   try {
     const res = await fetch(API_URL + "get-exams-by-class", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: createHeaders(),
       body: JSON.stringify(payload),
     });
 
@@ -377,7 +389,7 @@ export async function addStudentsToClass(payload) {
   try {
     const res = await fetch(API_URL + "add-students-to-class", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: createHeaders(),
       body: JSON.stringify(payload),
     });
 
@@ -399,7 +411,7 @@ export async function getStudents(payload = {}) {
   try {
     const res = await fetch(API_URL + "get-students", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: createHeaders(),
       body: JSON.stringify(payload),
     });
 
@@ -417,7 +429,7 @@ export async function getStudentsInClass({ class_id }) {
   try {
     const res = await fetch(API_URL + "get-students-in-class", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: createHeaders(),
       body: JSON.stringify({ class_id }),
     });
 
@@ -435,7 +447,7 @@ export async function getStudentsNotInClass({ class_id }) {
   try {
     const res = await fetch(API_URL + "get-students-not-in-class", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: createHeaders(),
       body: JSON.stringify({ class_id }),
     });
 
@@ -453,7 +465,7 @@ export async function getStudentsNotInSession(payload) {
   try {
     const res = await fetch(API_URL + "get-students-not-in-session", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: createHeaders(),
       body: JSON.stringify(payload),
     });
 
@@ -478,7 +490,7 @@ export async function joinClass(class_id, student_id, password = "") {
   try {
     const res = await fetch(API_URL + "join-class", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: createHeaders(),
       body: JSON.stringify({ class_id, student_id, password }),
     });
 
@@ -500,7 +512,7 @@ export async function createExam(payload) {
   try {
     const res = await fetch(API_URL + "create-exam", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: createHeaders(),
       body: JSON.stringify(payload),
     });
 
@@ -535,7 +547,7 @@ export async function getClassById(payload) {
   try {
     const res = await fetch(API_URL + `get-class`,{
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: createHeaders(),
       body: JSON.stringify(payload),
     });
 
@@ -552,7 +564,7 @@ export async function getInfoViolation(payload) {
   try {
     const res = await fetch(API_URL + "teacher/violations", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: createHeaders(),
       body: JSON.stringify(payload),
     });
 
@@ -571,7 +583,7 @@ export async function getStudentViolations(student_code) {
   try {
     const res = await fetch(API_URL + "student/violations", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: createHeaders(),
       body: JSON.stringify({ student_code }),
     });
 
@@ -590,7 +602,7 @@ export async function addStudentsToExamSession(payload) {
   try {
     const res = await fetch(API_URL + "exam-session/add-students", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: createHeaders(),
       body: JSON.stringify(payload),
     });
 
@@ -609,7 +621,7 @@ export async function createExamSession(payload) {
   try {
     const res = await fetch(API_URL + "exam-session/create", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: createHeaders(),
       body: JSON.stringify(payload),
     });
 
@@ -628,7 +640,7 @@ export async function getExamSessions(payload) {
   try {
     const res = await fetch(API_URL + "exam-session/list", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: createHeaders(),
       body: JSON.stringify(payload),
     });
 
@@ -646,7 +658,7 @@ export async function getStudentsInSession(session_id) {
   try {
     const res = await fetch(API_URL + "get-students-in-session", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: createHeaders(),
       body: JSON.stringify({ session_id }),
     });
 
@@ -664,7 +676,7 @@ export async function getExamSessionDetail(session_id) {
   try {
     const res = await fetch(API_URL + `exam-session/detail/${session_id}`, {
       method: "GET",
-      headers: { "Content-Type": "application/json" },
+      headers: createHeaders(),
     });
 
     const data = await res.json();
@@ -681,7 +693,7 @@ export async function removeStudentFromSession({ session_id, student_id }) {
   try {
     const res = await fetch(API_URL + "exam-session/remove-student", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: createHeaders(),
       body: JSON.stringify({ session_id, student_id }),
     });
 
@@ -795,7 +807,7 @@ export async function checkFaceRegistrationStatus(payload) {
   try {
     const res = await fetch(API_URL + "check-face-registration-status", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: createHeaders(),
       body: JSON.stringify(payload),
     });
 
@@ -817,7 +829,7 @@ export async function getStudentCurrentSessions(payload) {
   try {
     const res = await fetch(API_URL + "student/current-sessions", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: createHeaders(),
       body: JSON.stringify(payload),
     });
 
