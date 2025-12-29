@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import { MdCheckCircle } from "react-icons/md";
+import { MdCheckCircle, MdLock } from "react-icons/md";
 import { useDispatch, useSelector } from "react-redux";
 import { login, logout } from "../../redux/slices/userSlice.js";
 import {
@@ -9,9 +9,16 @@ import {
 } from "../../redux/slices/verifySlice.js";
 import { useNavigate, Link } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
-import { createAccount, getAccountByFace } from "../../services/services.js";
-import { LogOut, GraduationCap } from "lucide-react";
+import { 
+  createAccount, 
+  getAccountByFace,
+  reportFaceVerificationFailure,
+  checkFaceVerificationApproval
+} from "../../services/services.js";
+import { LogOut, GraduationCap, AlertTriangle, Home } from "lucide-react";
 import { URL_API } from "../../utils/path.js";
+
+const MAX_FAILED_ATTEMPTS = 3;
 
 export default function FaceVerify() {
   const videoRef = useRef(null);
@@ -20,11 +27,90 @@ export default function FaceVerify() {
   const [status, setStatus] = useState("");
   const [student, setStudent] = useState(null);
   const [capturing, setCapturing] = useState(false);
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [isApproved, setIsApproved] = useState(false); // Track xem đã được approve chưa
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const verifyInfo = useSelector((state) => state.verify.verifyInfo);
   const userInfo = useSelector((state) => state.user.userInfo);
+
+  // Khôi phục số lần thất bại từ localStorage (theo sessionId) và kiểm tra approval
+  useEffect(() => {
+    const checkApprovalAndAttempts = async () => {
+      if (!verifyInfo?.sessionId || !verifyInfo?.examId || !userInfo?.student_id) {
+        return;
+      }
+
+      const storageKey = `face_verify_attempts_${verifyInfo.sessionId}`;
+      const savedAttempts = parseInt(localStorage.getItem(storageKey) || "0", 10);
+      setFailedAttempts(savedAttempts);
+      
+      // Nếu đã có 3 lần thất bại, kiểm tra xem đã được approve chưa
+      if (savedAttempts >= MAX_FAILED_ATTEMPTS) {
+        setIsBlocked(true);
+        
+        // Kiểm tra approval
+        try {
+          const approvalCheck = await checkFaceVerificationApproval({
+            student_id: userInfo.student_id,
+            session_id: verifyInfo.sessionId,
+            exam_id: verifyInfo.examId,
+          });
+          
+          if (approvalCheck.success && approvalCheck.approved) {
+            // Đã được approve, cho phép thử xác thực lại (không tự động vào thi)
+            setIsApproved(true);
+            setIsBlocked(false); // Bỏ block để cho phép thử lại
+            toast.success("Giáo viên đã cho phép bạn vào thi. Bạn có thể thử xác thực lại hoặc vào thi trực tiếp.", {
+              duration: 5000,
+            });
+          }
+        } catch (err) {
+          console.error("Lỗi kiểm tra approval:", err);
+        }
+      }
+    };
+    
+    checkApprovalAndAttempts();
+  }, [verifyInfo?.sessionId, verifyInfo?.examId, userInfo?.student_id]);
+
+  // Kiểm tra approval định kỳ khi bị block (mỗi 5 giây)
+  useEffect(() => {
+    if (!isBlocked || !verifyInfo?.sessionId || !verifyInfo?.examId || !userInfo?.student_id) {
+      return;
+    }
+
+    const checkApproval = async () => {
+      try {
+        const approvalCheck = await checkFaceVerificationApproval({
+          student_id: userInfo.student_id,
+          session_id: verifyInfo.sessionId,
+          exam_id: verifyInfo.examId,
+        });
+        
+        if (approvalCheck.success && approvalCheck.approved) {
+          // Đã được approve, cho phép thử xác thực lại
+          setIsApproved(true);
+          setIsBlocked(false);
+          toast.success("Giáo viên đã cho phép bạn vào thi. Bạn có thể thử xác thực lại hoặc vào thi trực tiếp.", {
+            duration: 5000,
+          });
+        }
+      } catch (err) {
+        console.error("Lỗi kiểm tra approval:", err);
+      }
+    };
+
+    // Kiểm tra ngay lập tức
+    checkApproval();
+    
+    // Sau đó kiểm tra định kỳ mỗi 5 giây
+    const interval = setInterval(checkApproval, 5000);
+    
+    return () => clearInterval(interval);
+  }, [isBlocked, verifyInfo?.sessionId, verifyInfo?.examId, userInfo?.student_id]);
 
   /* ======================================
           BẬT CAMERA
@@ -137,6 +223,12 @@ export default function FaceVerify() {
             GỬI FRAME ĐỂ NHẬN DIỆN
   ====================================== */
   const handleLogin = async () => {
+    // Kiểm tra nếu đã bị chặn và chưa được approve
+    if (isBlocked && !isApproved) {
+      toast.error("Bạn đã vượt quá số lần thử cho phép. Vui lòng đợi giáo viên cho phép.");
+      return;
+    }
+
     setCapturing(true);
     setStatus("Đang nhận diện khuôn mặt...");
 
@@ -182,6 +274,14 @@ export default function FaceVerify() {
           if (userInfo.student_id == studentId) {
             setStudent({ student_id: studentId });
 
+            // Reset số lần thất bại khi xác thực thành công
+            if (verifyInfo?.sessionId) {
+              const storageKey = `face_verify_attempts_${verifyInfo.sessionId}`;
+              localStorage.removeItem(storageKey);
+              setFailedAttempts(0);
+              setIsBlocked(false);
+            }
+
             // Lấy thông tin tài khoản
             const acc = await getAccountByFace({ student_id: studentId });
             dispatch(setVerifyInfo(acc.user));
@@ -197,26 +297,118 @@ export default function FaceVerify() {
               `/student_live?exam=${verifyInfo?.examId}&session=${verifyInfo.sessionId}`
             );
           }
-          toast.error("Khuôn mặt không khớp với sinh viên đăng ký!", {
-          id: userInfo.student_id,
-        });
+          
+          // Thất bại: khuôn mặt không khớp
+          handleVerificationFailure(toastId);
+          return;
         }
 
         // có mặt nhưng không trùng
-        toast.error("Khuôn mặt không khớp với sinh viên đăng ký!", {
-          id: toastId,
-        });
-        setCapturing(false);
+        handleVerificationFailure(toastId);
         return;
       }
 
-      toast.error("Không nhận diện được khuôn mặt!", { id: toastId });
+      // Thất bại: không nhận diện được khuôn mặt
+      handleVerificationFailure(toastId);
     } catch (err) {
       console.error(err);
       toast.error("Lỗi kết nối server!", { id: toastId });
-    } finally {
       setCapturing(false);
     }
+  };
+
+  /* ======================================
+        XỬ LÝ KHI XÁC THỰC THẤT BẠI
+  ====================================== */
+  const handleVerificationFailure = async (toastId) => {
+    // Kiểm tra xem đã được approve chưa
+    let approved = isApproved;
+    if (!approved && verifyInfo?.sessionId && verifyInfo?.examId && userInfo?.student_id) {
+      try {
+        const approvalCheck = await checkFaceVerificationApproval({
+          student_id: userInfo.student_id,
+          session_id: verifyInfo.sessionId,
+          exam_id: verifyInfo.examId,
+        });
+        approved = approvalCheck.success && approvalCheck.approved;
+        if (approved) {
+          setIsApproved(true);
+        }
+      } catch (err) {
+        console.error("Lỗi kiểm tra approval:", err);
+      }
+    }
+
+    // Nếu đã được approve, cho vào thi luôn dù xác thực thất bại
+    if (approved) {
+      toast.success("Bạn đã được giáo viên cho phép. Đang vào phòng thi...", { id: toastId });
+      
+      try {
+        const acc = await getAccountByFace({ student_id: userInfo.student_id });
+        if (acc && acc.user) {
+          dispatch(setVerifyInfo(acc.user));
+          
+          stopCamera();
+          
+          setTimeout(() => {
+            navigate(
+              `/student_live?exam=${verifyInfo.examId}&session=${verifyInfo.sessionId}`
+            );
+          }, 1000);
+        }
+      } catch (err) {
+        console.error("Lỗi khi lấy thông tin tài khoản:", err);
+        toast.error("Có lỗi xảy ra. Vui lòng thử lại.", { id: toastId });
+      }
+      
+      setCapturing(false);
+      return;
+    }
+
+    // Nếu chưa được approve, xử lý như bình thường
+    const newAttempts = failedAttempts + 1;
+    setFailedAttempts(newAttempts);
+
+    // Lưu vào localStorage theo sessionId
+    if (verifyInfo?.sessionId) {
+      const storageKey = `face_verify_attempts_${verifyInfo.sessionId}`;
+      localStorage.setItem(storageKey, newAttempts.toString());
+    }
+
+    const remainingAttempts = MAX_FAILED_ATTEMPTS - newAttempts;
+
+    if (newAttempts >= MAX_FAILED_ATTEMPTS) {
+      setIsBlocked(true);
+      
+      // Gửi thông tin lên backend
+      if (verifyInfo?.sessionId && verifyInfo?.examId && userInfo?.student_id) {
+        try {
+          await reportFaceVerificationFailure({
+            student_id: userInfo.student_id,
+            session_id: verifyInfo.sessionId,
+            exam_id: verifyInfo.examId,
+          });
+          console.log("[INFO] Đã báo cáo xác thực thất bại 3 lần lên server");
+        } catch (err) {
+          console.error("[ERROR] Lỗi báo cáo thất bại:", err);
+        }
+      }
+      
+      toast.error(
+        `Xác thực thất bại! Bạn đã sử dụng hết ${MAX_FAILED_ATTEMPTS} lần thử. Giáo viên sẽ được thông báo và có thể cho phép bạn vào thi.`,
+        { id: toastId, duration: 8000 }
+      );
+      
+      // Log sự kiện này
+      console.warn(`[SECURITY] Student ${userInfo?.student_id} failed face verification ${MAX_FAILED_ATTEMPTS} times for session ${verifyInfo?.sessionId}`);
+    } else {
+      toast.error(
+        `Xác thực thất bại! Còn ${remainingAttempts} lần thử.`,
+        { id: toastId }
+      );
+    }
+
+    setCapturing(false);
   };
 
   const handleLogout = () => {
@@ -271,14 +463,104 @@ export default function FaceVerify() {
             />
           </div>
 
+          {/* Hiển thị cảnh báo khi bị chặn */}
+          {isBlocked && !isApproved && (
+            <div className="mb-4 bg-red-50 border-2 border-red-300 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <MdLock className="text-red-500 mt-1 flex-shrink-0" size={24} />
+                <div className="flex-1">
+                  <h3 className="font-bold text-red-700 mb-2">
+                    Xác thực bị khóa
+                  </h3>
+                  <p className="text-sm text-red-600 mb-3">
+                    Bạn đã sử dụng hết {MAX_FAILED_ATTEMPTS} lần thử xác thực khuôn mặt. 
+                    Giáo viên đã được thông báo và có thể cho phép bạn vào thi. 
+                    Vui lòng đợi giáo viên xử lý hoặc liên hệ trực tiếp.
+                  </p>
+                  <div className="flex flex-col gap-2 mt-3">
+                    <button
+                      onClick={() => navigate("/student_dashboard")}
+                      className="w-full bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 transition flex items-center justify-center gap-2"
+                    >
+                      <Home size={18} />
+                      Về trang chủ
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Hiển thị thông báo khi đã được approve */}
+          {isApproved && (
+            <div className="mb-4 bg-green-50 border-2 border-green-300 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <MdCheckCircle className="text-green-500 mt-1 flex-shrink-0" size={24} />
+                <div className="flex-1">
+                  <h3 className="font-bold text-green-700 mb-2">
+                    Đã được giáo viên cho phép
+                  </h3>
+                  <p className="text-sm text-green-600 mb-3">
+                    Giáo viên đã cho phép bạn vào thi. Bạn có thể thử xác thực lại hoặc vào thi trực tiếp.
+                  </p>
+                  <div className="flex flex-col gap-2 mt-3">
+                    <button
+                      onClick={async () => {
+                        try {
+                          const acc = await getAccountByFace({ student_id: userInfo.student_id });
+                          if (acc && acc.user) {
+                            dispatch(setVerifyInfo(acc.user));
+                            stopCamera();
+                            navigate(
+                              `/student_live?exam=${verifyInfo.examId}&session=${verifyInfo.sessionId}`
+                            );
+                          }
+                        } catch (err) {
+                          console.error("Lỗi:", err);
+                          toast.error("Có lỗi xảy ra. Vui lòng thử lại.");
+                        }
+                      }}
+                      className="w-full bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 transition flex items-center justify-center gap-2"
+                    >
+                      <MdCheckCircle size={18} />
+                      Vào thi trực tiếp
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Hiển thị số lần thử còn lại */}
+          {!isBlocked && failedAttempts > 0 && (
+            <div className="mb-4 bg-yellow-50 border border-yellow-300 rounded-xl p-3">
+              <div className="flex items-center gap-2 text-yellow-700">
+                <AlertTriangle size={20} />
+                <span className="text-sm font-medium">
+                  Còn {MAX_FAILED_ATTEMPTS - failedAttempts} lần thử
+                </span>
+              </div>
+            </div>
+          )}
+
           <button
             onClick={handleLogin}
-            disabled={capturing}
-            className={`w-full bg-indigo-500 text-white py-3 rounded-xl hover:bg-indigo-600 transition font-medium ${
-              capturing ? "opacity-60 cursor-not-allowed" : ""
+            disabled={capturing || (isBlocked && !isApproved)}
+            className={`w-full py-3 rounded-xl transition font-medium ${
+              isBlocked && !isApproved
+                ? "bg-gray-400 text-white cursor-not-allowed"
+                : capturing
+                ? "bg-indigo-400 text-white cursor-not-allowed opacity-60"
+                : "bg-indigo-500 text-white hover:bg-indigo-600"
             }`}
           >
-            {capturing ? "Đang nhận diện..." : "Xác thực danh tính"}
+            {isBlocked && !isApproved
+              ? "Đã khóa - Đợi giáo viên cho phép"
+              : capturing
+              ? "Đang nhận diện..."
+              : isApproved
+              ? "Thử xác thực lại"
+              : "Xác thực danh tính"}
           </button>
 
           <p className="text-center mt-4 text-sm text-gray-600">{status}</p>

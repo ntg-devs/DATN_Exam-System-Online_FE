@@ -1311,7 +1311,7 @@ export default function AdminDashboard() {
                             </td>
                             <td className="px-6 py-4">
                               <span
-                                className={`inline-flex items-center px-1 py-1.5 rounded-full text-xs font-semibold w-[109px] ${
+                                className={`inline-flex items-center px-1 py-1.5 rounded-full justify-center text-xs font-semibold w-[109px] ${
                                   acc.is_active === false ||
                                   acc.is_active == null
                                     ? "bg-red-100 text-red-700 border border-red-200"

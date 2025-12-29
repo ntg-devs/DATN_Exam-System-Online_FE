@@ -863,3 +863,87 @@ export async function generateReport(payload) {
     return { success: false, detail: err.message };
   }
 }
+
+/**
+ * Báo cáo khi sinh viên xác thực khuôn mặt thất bại 3 lần
+ * @param {Object} payload { student_id, session_id, exam_id }
+ */
+export async function reportFaceVerificationFailure(payload) {
+  try {
+    const res = await apiCall("face-verification/failed", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Không thể báo cáo thất bại!");
+
+    return data; // { success: true, message: "...", id: "..." }
+  } catch (err) {
+    console.error("[❌] Lỗi reportFaceVerificationFailure:", err);
+    return { success: false, detail: err.message };
+  }
+}
+
+/**
+ * Lấy danh sách sinh viên xác thực thất bại 3 lần
+ * @param {Object} payload { session_id }
+ */
+export async function getFaceVerificationFailures(payload) {
+  try {
+    const res = await apiCall("face-verification/failures", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Không thể lấy danh sách!");
+
+    return data; // { success: true, failures: [...] }
+  } catch (err) {
+    console.error("[❌] Lỗi getFaceVerificationFailures:", err);
+    return { success: false, failures: [] };
+  }
+}
+
+/**
+ * Giáo viên cho phép sinh viên vào thi dù đã xác thực sai 3 lần
+ * @param {Object} payload { failure_id, teacher_id }
+ */
+export async function approveFaceVerification(payload) {
+  try {
+    const res = await apiCall("face-verification/approve", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Không thể approve!");
+
+    return data; // { success: true, message: "...", failure: {...} }
+  } catch (err) {
+    console.error("[❌] Lỗi approveFaceVerification:", err);
+    return { success: false, detail: err.message };
+  }
+}
+
+/**
+ * Kiểm tra xem sinh viên đã được approve chưa
+ * @param {Object} payload { student_id, session_id, exam_id }
+ */
+export async function checkFaceVerificationApproval(payload) {
+  try {
+    const res = await apiCall("face-verification/check-approval", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Không thể kiểm tra!");
+
+    return data; // { success: true, approved: boolean, approval: {...} }
+  } catch (err) {
+    console.error("[❌] Lỗi checkFaceVerificationApproval:", err);
+    return { success: false, approved: false };
+  }
+}

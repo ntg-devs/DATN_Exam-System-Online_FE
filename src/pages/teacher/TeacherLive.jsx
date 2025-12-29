@@ -10,9 +10,14 @@ import {
   List,
   Users,
 } from "lucide-react";
+import toast, { Toaster } from "react-hot-toast";
 import { FaCamera } from "react-icons/fa";
 import { useSelector, useDispatch } from "react-redux";
-import { getStudentsInSession } from "../../services/services";
+import { 
+  getStudentsInSession,
+  getFaceVerificationFailures,
+  approveFaceVerification
+} from "../../services/services";
 import { useEffect, useState } from "react";
 import { SOCKET_URL } from "../../utils/path";
 import { logout } from "../../redux/slices/userSlice.js";
@@ -53,8 +58,10 @@ export default function TeacherLive() {
   const [viewMode, setViewMode] = useState("list");
   const [listStudents, setListStudents] = useState([]);
   const [lightboxSrc, setLightboxSrc] = useState(null);
-
   const [showTeacherInfo, setShowTeacherInfo] = useState(false);
+  const [verificationFailures, setVerificationFailures] = useState([]);
+  const [showFailuresModal, setShowFailuresModal] = useState(false);
+  const [loadingApproval, setLoadingApproval] = useState({});
 
   const verifyInfo = useSelector((state) => state.verify.verifyInfo);
 
@@ -133,11 +140,55 @@ export default function TeacherLive() {
     if (res.success) setListStudents(res.students);
   };
 
+  const getVerificationFailures = async () => {
+    if (!sessionId) return;
+    const res = await getFaceVerificationFailures({ session_id: sessionId });
+    if (res.success) {
+      setVerificationFailures(res.failures);
+    }
+  };
+
+  const handleApproveStudent = async (failureId) => {
+    if (!userInfo?._id) {
+      alert("Không tìm thấy thông tin giáo viên");
+      return;
+    }
+
+    setLoadingApproval((prev) => ({ ...prev, [failureId]: true }));
+
+    try {
+      const res = await approveFaceVerification({
+        failure_id: failureId,
+        teacher_id: userInfo._id,
+      });
+
+      if (res.success) {
+        // Cập nhật danh sách
+        await getVerificationFailures();
+        alert(`Đã cho phép sinh viên ${res.failure.student_name} vào thi`);
+      } else {
+        alert("Không thể approve. Vui lòng thử lại.");
+      }
+    } catch (err) {
+      console.error("Lỗi approve:", err);
+      alert("Có lỗi xảy ra. Vui lòng thử lại.");
+    } finally {
+      setLoadingApproval((prev) => ({ ...prev, [failureId]: false }));
+    }
+  };
+
   useEffect(() => {
     getListStudentsFromExamSession();
-    // const ws = new WebSocket(`ws://localhost:8000/ws/teacher?exam=${examId}`);
-    const ws = new WebSocket(`${SOCKET_URL}/ws/teacher?exam=${examId}`);
-    // const ws = new WebSocket(`wss://103.142.24.110:8000/ws/teacher?exam=${examId}`);
+    getVerificationFailures();
+    
+    // Refresh danh sách failures mỗi 30 giây (backup, vì đã có realtime)
+    const interval = setInterval(() => {
+      getVerificationFailures();
+    }, 30000);
+    
+    // const ws = new WebSocket(`ws://localhost:8000/ws/teacher?exam=${examId}&session=${sessionId}`);
+    const ws = new WebSocket(`${SOCKET_URL}/ws/teacher?exam=${examId}&session=${sessionId}`);
+    // const ws = new WebSocket(`wss://103.142.24.110:8000/ws/teacher?exam=${examId}&session=${sessionId}`);
     ws.onopen = () => setWsConnected(true);
     ws.onclose = () => setWsConnected(false);
     ws.onmessage = (ev) => {
@@ -170,14 +221,49 @@ export default function TeacherLive() {
             return { ...prev, [msg.student]: { alerts: [] } };
           });
         }
+        // Xử lý thông báo xác thực thất bại 3 lần
+        if (msg.type === "face_verification_failed") {
+          // Thêm vào danh sách failures realtime
+          setVerificationFailures((prev) => {
+            // Kiểm tra xem đã có chưa (tránh duplicate)
+            const exists = prev.some((f) => f._id === msg.failure._id);
+            if (exists) return prev;
+            return [msg.failure, ...prev];
+          });
+          // Hiển thị thông báo toast
+          toast.error(
+            `Sinh viên ${msg.failure.student_name || msg.failure.student_id} xác thực thất bại 3 lần`,
+            {
+              duration: 5000,
+              icon: "⚠️",
+            }
+          );
+          console.log("[REALTIME] Sinh viên xác thực thất bại 3 lần:", msg.failure);
+        }
+        // Xử lý thông báo đã approve
+        if (msg.type === "face_verification_approved") {
+          // Xóa khỏi danh sách failures
+          setVerificationFailures((prev) =>
+            prev.filter((f) => f._id !== msg.failure._id)
+          );
+          // Hiển thị thông báo toast
+          toast.success(
+            `Đã cho phép ${msg.failure.student_name || msg.failure.student_id} vào thi`,
+            {
+              duration: 3000,
+            }
+          );
+          console.log("[REALTIME] Đã approve sinh viên:", msg.failure);
+        }
       } catch (e) {
         console.error("WS Error:", e);
       }
     };
-    return () => ws.close();
+    return () => {
+      clearInterval(interval);
+      ws.close();
+    };
   }, [examId]);
-
-  console.log(listStudents);
 
   return (
     <>
@@ -288,6 +374,18 @@ export default function TeacherLive() {
               </div>
 
               <div className="flex items-center gap-4">
+                {verificationFailures.length > 0 && (
+                  <button
+                    onClick={() => setShowFailuresModal(true)}
+                    className="flex items-center gap-3 px-3 py-2 bg-gradient-to-r from-red-500 to-orange-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition relative"
+                  >
+                    <Bell size={20} />
+                    Xác thực thất bại
+                    <span className="absolute -top-2 -right-2 bg-yellow-400 text-red-800 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
+                      {verificationFailures.length}
+                    </span>
+                  </button>
+                )}
                 <button
                   onClick={() => setShowStudentList(true)}
                   className="flex items-center gap-3 px-3 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition"
@@ -751,10 +849,97 @@ export default function TeacherLive() {
           </div>
         )}
 
+        {/* MODAL SINH VIÊN XÁC THỰC THẤT BẠI 3 LẦN */}
+        {showFailuresModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 p-6">
+            <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+              <div className="bg-gradient-to-r from-red-500 to-orange-600 p-6 text-white">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-3xl font-bold flex items-center gap-4">
+                    <Bell size={36} /> Sinh viên xác thực thất bại 3 lần
+                  </h2>
+                  <button
+                    onClick={() => {
+                      setShowFailuresModal(false);
+                      getVerificationFailures(); // Refresh khi đóng
+                    }}
+                    className="text-4xl hover:text-red-300"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6">
+                {verificationFailures.length === 0 ? (
+                  <p className="text-center text-gray-500 py-20 text-xl">
+                    Không có sinh viên nào xác thực thất bại 3 lần
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {verificationFailures.map((failure) => (
+                      <div
+                        key={failure._id}
+                        className="bg-gradient-to-br from-red-50 to-orange-50 border-2 border-red-300 rounded-2xl p-6 shadow-lg"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-3">
+                              <div className="w-12 h-12 rounded-full bg-red-500 flex items-center justify-center text-white font-bold text-lg">
+                                {failure.student_id?.charAt(0) || "?"}
+                              </div>
+                              <div>
+                                <h3 className="text-xl font-bold text-gray-800">
+                                  {failure.student_name || "Không có tên"}
+                                </h3>
+                                <p className="text-sm text-gray-600">
+                                  Mã SV: {failure.student_id}
+                                </p>
+                                {failure.student_email && (
+                                  <p className="text-sm text-gray-500">
+                                    Email: {failure.student_email}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="mt-3 text-sm text-gray-600">
+                              <p>
+                                Thời gian:{" "}
+                                {failure.created_at
+                                  ? new Date(failure.created_at).toLocaleString("vi-VN")
+                                  : "Không xác định"}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleApproveStudent(failure._id)}
+                            disabled={loadingApproval[failure._id]}
+                            className={`px-6 py-3 rounded-xl font-semibold shadow-lg transition ${
+                              loadingApproval[failure._id]
+                                ? "bg-gray-400 cursor-not-allowed"
+                                : "bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white"
+                            }`}
+                          >
+                            {loadingApproval[failure._id]
+                              ? "Đang xử lý..."
+                              : "Cho phép vào thi"}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* LIGHTBOX */}
         {lightboxSrc && (
           <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
         )}
+
+        {/* TOAST NOTIFICATIONS */}
+        <Toaster position="top-right" />
       </div>
     </>
   );
